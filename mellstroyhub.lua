@@ -1,5 +1,5 @@
--- Utility Hub (LocalScript) - ENHANCED WITH BYPASS
--- Features: Aim Assist, AutoPB, AutoFarm, AutoSell, AutoLuckyBuy, Friend List, Toggle Menu, Clickable Buttons, Scrollable Menu, Persistent Slider, Goto (WITH ANTI-CHEAT BYPASS)
+-- Utility Hub (LocalScript) - FIXED VERSION
+-- Исправлены проблемы с отображением GUI и стабильностью
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -7,40 +7,15 @@ local UserInputService = game:GetService("UserInputService")
 local PathfindingService = game:GetService("PathfindingService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
+-- Ждем загрузки игрока
 if not LocalPlayer then
-    warn("This script must run as a LocalScript.")
-    return
+    repeat task.wait() until Players.LocalPlayer
+    LocalPlayer = Players.LocalPlayer
 end
-
--- ==================== NAMECALL HOOK FOR ANTI-CHEAT BYPASS ====================
-local OldNamecallTP
-local isHooked = false
-local NamecallBypassRemote = nil
-
-local function hookTPBypass()
-    if not newcclosure or not hookmetamethod then return end
-    if isHooked then return end
-    
-    OldNamecallTP = hookmetamethod(game, '__namecall', newcclosure(function(self, ...)
-        local Arguments = {...}
-        local Method = getnamecallmethod()
-        
-        -- Спуфинг InvokeServer для обхода анти-чита
-        if Method == "InvokeServer" and Arguments[1] == "idklolbrah2de" then
-            return "___XP DE KEY"
-        end
-        
-        return OldNamecallTP(self, ...)
-    end))
-    isHooked = true
-end
-
-pcall(hookTPBypass)
 
 -- Debug logging
 local DebugEnabled = true
@@ -55,7 +30,7 @@ local function dbg(msg)
     end
 end
 
--- Settings and state
+-- Settings
 local Settings = {
     AutoFarm = false,
     AutoSell = false,
@@ -84,7 +59,7 @@ local Settings = {
     }
 }
 
--- Remote candidate names to try auto-resolving
+local Remotes = { Sell = nil, Buy = nil, Item = nil, Block = nil }
 local RemoteCandidates = {
     Sell = {"SellRemote", "SellAll", "SellService", "SellEvent", "Remote_Sell"},
     Buy = {"ShopRemote", "BuyRemote", "PurchaseRemote", "ShopBuy", "Remote_Buy"},
@@ -92,21 +67,280 @@ local RemoteCandidates = {
     Block = {"BlockRemote", "PBRemote", "BlockEvent", "BlockAction"}
 }
 
-local Remotes = { Sell = nil, Buy = nil, Item = nil, Block = nil }
+-- ANTI-CHEAT BYPASS
+local OldNamecallTP
+local isHooked = false
+local NamecallBypassRemote = nil
+
+local function hookTPBypass()
+    if not newcclosure or not hookmetamethod then 
+        dbg("Bypass functions not available")
+        return 
+    end
+    if isHooked then return end
+    
+    local gotoBtn = new(entry, "TextButton", {
+        Text = "Goto",
+        Size = UDim2.new(0, 50, 0, 24),
+        Position = UDim2.new(1, -58, 0.5, -12),
+        BackgroundColor3 = Color3.fromRGB(90, 140, 200),
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBold,
+        TextSize = 11
+    })
+    new(gotoBtn, "UICorner", {CornerRadius = UDim.new(0, 5)})
+    
+    gotoBtn.MouseButton1Click:Connect(function()
+        task.spawn(function()
+            if player and player.Character then
+                local success = gotoPlayer(player)
+                if success then
+                    dbg("Телепорт к "..player.Name.." выполнен")
+                else
+                    dbg("Не удалось добраться до "..player.Name)
+                end
+            end
+        end)
+    end)
+    
+    PlayerEntries[player] = {Frame = entry, Goto = gotoBtn}
+end
+
+local function removePlayerEntry(player)
+    local e = PlayerEntries[player]
+    if e and e.Frame then
+        pcall(function() e.Frame:Destroy() end)
+    end
+    PlayerEntries[player] = nil
+end
+
+-- Добавляем текущих игроков
+for _, p in ipairs(Players:GetPlayers()) do
+    if p ~= LocalPlayer then
+        createPlayerEntry(p)
+    end
+end
+
+-- Отслеживаем новых игроков
+Players.PlayerAdded:Connect(function(pl)
+    if pl ~= LocalPlayer then
+        createPlayerEntry(pl)
+    end
+end)
+
+Players.PlayerRemoving:Connect(removePlayerEntry)
+
+-- Debug log
+createSectionLabel("📋 Лог событий")
+
+local logFrame = new(Content, "Frame", {
+    Size = UDim2.new(1, 0, 0, 150),
+    BackgroundColor3 = Color3.fromRGB(48, 54, 66)
+})
+new(logFrame, "UICorner", {CornerRadius = UDim.new(0, 8)})
+
+local logScroll = new(logFrame, "ScrollingFrame", {
+    Size = UDim2.new(1, -12, 1, -12),
+    Position = UDim2.new(0, 6, 0, 6),
+    BackgroundTransparency = 1,
+    ScrollBarThickness = 6
+})
+new(logScroll, "UIListLayout", {Padding = UDim.new(0, 2)})
+logScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+local function refreshGuiLog()
+    for _, c in ipairs(logScroll:GetChildren()) do
+        if c:IsA("TextLabel") then c:Destroy() end
+    end
+    
+    local startIdx = math.max(1, #GuiLogBuffer - 50)
+    for i = startIdx, #GuiLogBuffer do
+        local logLabel = new(logScroll, "TextLabel", {
+            Text = GuiLogBuffer[i],
+            BackgroundTransparency = 1,
+            TextColor3 = Color3.fromRGB(200, 200, 200),
+            Font = Enum.Font.Code,
+            TextSize = 11,
+            Size = UDim2.new(1, -8, 0, 16),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd
+        })
+    end
+end
+
+-- Обновляем лог каждую секунду
+task.spawn(function()
+    while ScreenGui and ScreenGui.Parent do
+        refreshGuiLog()
+        task.wait(1)
+    end
+end)
+
+dbg("Все элементы GUI добавлены!")
+
+-- Keyboard shortcuts
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+    
+    local key = input.KeyCode
+    
+    if key == Settings.Keybinds.ToggleMenu then
+        MainFrame.Visible = not MainFrame.Visible
+        dbg("Меню "..(MainFrame.Visible and "открыто" or "закрыто"))
+        
+    elseif key == Settings.Keybinds.ToggleAutoFarm then
+        Settings.AutoFarm = not Settings.AutoFarm
+        afBtn.Text = Settings.AutoFarm and "ON" or "OFF"
+        afBtn.BackgroundColor3 = Settings.AutoFarm and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
+        if Settings.AutoFarm then startAutoFarm() else stopAutoFarm() end
+        
+    elseif key == Settings.Keybinds.ToggleAutoSell then
+        Settings.AutoSell = not Settings.AutoSell
+        asBtn.Text = Settings.AutoSell and "ON" or "OFF"
+        asBtn.BackgroundColor3 = Settings.AutoSell and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
+        if Settings.AutoSell then startAutoSell() else stopAutoSell() end
+        
+    elseif key == Settings.Keybinds.ToggleLucky then
+        Settings.AutoLuckyBuy = not Settings.AutoLuckyBuy
+        alBtn.Text = Settings.AutoLuckyBuy and "ON" or "OFF"
+        alBtn.BackgroundColor3 = Settings.AutoLuckyBuy and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
+        if Settings.AutoLuckyBuy then startAutoLuckyBuy() else stopAutoLuckyBuy() end
+        
+    elseif key == Settings.Keybinds.TogglePB then
+        Settings.AutoPB = not Settings.AutoPB
+        apbBtn.Text = Settings.AutoPB and "ON" or "OFF"
+        apbBtn.BackgroundColor3 = Settings.AutoPB and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
+        if Settings.AutoPB then startAutoPB() else stopAutoPB() end
+        
+    elseif key == Settings.Keybinds.ToggleAim then
+        Settings.AimAssist = not Settings.AimAssist
+        aimBtn.Text = Settings.AimAssist and "ON" or "OFF"
+        aimBtn.BackgroundColor3 = Settings.AimAssist and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
+    end
+end)
+
+-- Sync walkspeed on respawn
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.3)
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        Settings.DefaultWalkspeed = humanoid.WalkSpeed or Settings.DefaultWalkspeed
+        if Settings.AutoFarm then
+            humanoid.WalkSpeed = Settings.AutoFarmWalkspeed
+        end
+    end
+    resolveNamecallRemote()
+    dbg("Персонаж респавнился")
+end)
+
+-- Setup players highlighting
+Players.PlayerAdded:Connect(function(player)
+    if Settings.Chams then
+        setupHighlightForPlayer(player)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    if Highlights[player] then
+        pcall(function() Highlights[player]:Destroy() end)
+        Highlights[player] = nil
+    end
+end)
+
+-- Initial setup
+autoResolveRemotes()
+resolveNamecallRemote()
+
+dbg("=================================")
+dbg("🚀 Utility Hub загружен успешно!")
+dbg("=================================")
+dbg("Горячие клавиши:")
+dbg("  RightShift - Открыть/закрыть меню")
+dbg("  Y - AutoFarm")
+dbg("  U - AutoSell")
+dbg("  I - Auto Lucky Buy")
+dbg("  F - Auto Perfect Block")
+dbg("  G - Aim Assist")
+dbg("=================================")
+dbg("GUI готов к использованию!")
+
+-- Показываем уведомление
+task.spawn(function()
+    local notification = new(ScreenGui, "Frame", {
+        Size = UDim2.new(0, 300, 0, 60),
+        Position = UDim2.new(0.5, -150, 0, -80),
+        BackgroundColor3 = Color3.fromRGB(50, 200, 100),
+        BorderSizePixel = 0
+    })
+    new(notification, "UICorner", {CornerRadius = UDim.new(0, 10)})
+    
+    local notifText = new(notification, "TextLabel", {
+        Size = UDim2.new(1, -20, 1, -20),
+        Position = UDim2.new(0, 10, 0, 10),
+        BackgroundTransparency = 1,
+        Text = "✅ Utility Hub загружен!\nНажмите RightShift для открытия",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
+        TextWrapped = true
+    })
+    
+    -- Анимация появления
+    notification:TweenPosition(
+        UDim2.new(0.5, -150, 0, 20),
+        Enum.EasingDirection.Out,
+        Enum.EasingStyle.Back,
+        0.5,
+        true
+    )
+    
+    task.wait(3)
+    
+    -- Анимация исчезновения
+    notification:TweenPosition(
+        UDim2.new(0.5, -150, 0, -80),
+        Enum.EasingDirection.In,
+        Enum.EasingStyle.Back,
+        0.5,
+        true
+    )
+    
+    task.wait(0.6)
+    notification:Destroy()
+end) success = pcall(function()
+        OldNamecallTP = hookmetamethod(game, '__namecall', newcclosure(function(self, ...)
+            local Arguments = {...}
+            local Method = getnamecallmethod()
+            
+            if Method == "InvokeServer" and Arguments[1] == "idklolbrah2de" then
+                return "___XP DE KEY"
+            end
+            
+            return OldNamecallTP(self, ...)
+        end))
+        isHooked = true
+        dbg("Bypass hook установлен успешно")
+    end)
+    
+    if not success then
+        dbg("Bypass hook не удалось установить (executor не поддерживает)")
+    end
+end
+
+pcall(hookTPBypass)
 
 -- Utility functions
 local function new(parent, class, props)
     local inst = Instance.new(class)
     if props then
         for k, v in pairs(props) do
-            if k == "Parent" then
-                inst.Parent = v
-            else
+            if k ~= "Parent" then
                 pcall(function() inst[k] = v end)
             end
         end
     end
-    if parent and not inst.Parent then inst.Parent = parent end
+    if parent then inst.Parent = parent end
     return inst
 end
 
@@ -129,7 +363,7 @@ local function autoResolveRemotes()
     Remotes.Buy = tryResolveRemoteByNames(RemoteCandidates.Buy)
     Remotes.Item = tryResolveRemoteByNames(RemoteCandidates.Item)
     Remotes.Block = tryResolveRemoteByNames(RemoteCandidates.Block)
-    dbg(("Remotes resolved: Sell=%s Buy=%s Item=%s Block=%s"):format(
+    dbg(("Remotes: Sell=%s Buy=%s Item=%s Block=%s"):format(
         tostring(Remotes.Sell and Remotes.Sell.Name or "nil"),
         tostring(Remotes.Buy and Remotes.Buy.Name or "nil"),
         tostring(Remotes.Item and Remotes.Item.Name or "nil"),
@@ -139,21 +373,15 @@ end
 
 local function safeFire(remote, ...)
     if not remote then return false end
-    local ok, err = pcall(function() remote:FireServer(...) end)
-    if not ok then dbg("safeFire error: "..tostring(err)) end
+    local ok = pcall(function() remote:FireServer(...) end)
     return ok
-end
-
-local function safeInvoke(remote, ...)
-    if not remote then return nil end
-    local ok, res = pcall(function() return remote:InvokeServer(...) end)
-    if not ok then dbg("safeInvoke error: "..tostring(res)) return nil end
-    return res
 end
 
 local function getRootPart(character)
     if not character then return nil end
-    return character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+    return character:FindFirstChild("HumanoidRootPart") or 
+           character:FindFirstChild("Torso") or 
+           character:FindFirstChild("UpperTorso")
 end
 
 local function randomOffset(magnitude)
@@ -161,7 +389,7 @@ local function randomOffset(magnitude)
     return Vector3.new((math.random()-0.5)*2*magnitude, 0, (math.random()-0.5)*2*magnitude)
 end
 
--- ==================== RESOLVE NAMECALL BYPASS REMOTE ====================
+-- Resolve bypass remote
 local function resolveNamecallRemote()
     if NamecallBypassRemote then return end
     local char = LocalPlayer.Character
@@ -173,45 +401,48 @@ local function resolveNamecallRemote()
         or ReplicatedStorage:FindFirstChild("InputRemote")
     
     if NamecallBypassRemote then
-        dbg("NamecallBypassRemote found: "..NamecallBypassRemote:GetFullName())
+        dbg("NamecallBypassRemote найден: "..NamecallBypassRemote:GetFullName())
     end
 end
 
--- ==================== TELEPORT WITH BYPASS ====================
+-- Teleport with bypass
 local function teleportToPosition(targetPos)
     local character = LocalPlayer.Character
     local HRP = character and getRootPart(character)
     
-    if not HRP or not NamecallBypassRemote or not isHooked then 
-        dbg("Teleport bypass not ready")
+    if not HRP then 
+        dbg("Телепорт: нет HRP")
         return false 
+    end
+    
+    if not NamecallBypassRemote or not isHooked then
+        dbg("Телепорт: bypass не готов, используем обычную телепортацию")
+        HRP.CFrame = CFrame.new(targetPos) * CFrame.new(0, 1, 0)
+        return true
     end
     
     local targetCFrame = CFrame.new(targetPos)
     local finalCFrame = targetCFrame * CFrame.new(0, 1, 0)
     
     pcall(function()
-        -- Спуфинг начала движения
         safeFire(NamecallBypassRemote, "InputBegan", {
             Input = Enum.KeyCode.W,
             CFrame = finalCFrame
         })
         
-        -- Телепортация
         HRP.CFrame = finalCFrame
         
-        -- Спуфинг завершения движения
         safeFire(NamecallBypassRemote, "InputEnded", {
             Input = Enum.KeyCode.W,
         })
         
-        dbg("Teleported to: "..tostring(targetPos))
+        dbg("Телепортировался к: "..tostring(targetPos))
     end)
     
     return true
 end
 
--- Pathfinding & movement (ORIGINAL - NOT REMOVED)
+-- Pathfinding
 local function computePath(startPos, endPos)
     local ok, path = pcall(function()
         local p = PathfindingService:CreatePath({
@@ -239,56 +470,45 @@ local function moveToWithPath(targetPos, stopDist, timeout)
     local path = computePath(hrp.Position, targetPos)
     if not path then
         humanoid:MoveTo(targetPos + randomOffset(0.6))
-        local ok = humanoid.MoveToFinished:Wait()
-        return ok and ((hrp.Position - targetPos).Magnitude <= stopDist)
+        humanoid.MoveToFinished:Wait()
+        return (hrp.Position - targetPos).Magnitude <= stopDist
     end
 
     local waypoints = path:GetWaypoints()
-    local lastPos = hrp.Position
-    local started = tick()
     for _, wp in ipairs(waypoints) do
         if wp.Action == Enum.PathWaypointAction.Jump then humanoid.Jump = true end
-        local wpPos = wp.Position + randomOffset(0.3)
-        humanoid:MoveTo(wpPos)
+        humanoid:MoveTo(wp.Position + randomOffset(0.3))
         humanoid.MoveToFinished:Wait()
         if (hrp.Position - targetPos).Magnitude <= stopDist then return true end
-        if tick() - started > timeout then return false end
-        if (hrp.Position - lastPos).Magnitude < 0.2 and (tick() - started) > (timeout * 0.3) then
-            return false
-        end
-        lastPos = hrp.Position
-        task.wait(0.01)
     end
     return (hrp.Position - targetPos).Magnitude <= stopDist
-end
-
-local function safeTweenCFrame(part, targetCFrame, duration)
-    local ok, t = pcall(function()
-        return TweenService:Create(part, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {CFrame = targetCFrame})
-    end)
-    if ok and t then
-        pcall(function() t:Play() end)
-        task.wait(duration + 0.05)
-    end
 end
 
 local function smoothApproach(targetPos)
     local ok = moveToWithPath(targetPos, Settings.MoveStopDistance, Settings.PathTimeout)
     if ok then return true end
+    
     if not LocalPlayer.Character then return false end
     local hrp = getRootPart(LocalPlayer.Character)
     if not hrp then return false end
+    
     local dist = (hrp.Position - targetPos).Magnitude
     local duration = math.clamp(dist / 28, 0.12, 1.2)
-    local tweenOk, err = pcall(function()
-        safeTweenCFrame(hrp, CFrame.new(targetPos + randomOffset(0.2), targetPos), duration)
+    
+    pcall(function()
+        local tween = TweenService:Create(hrp, 
+            TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), 
+            {CFrame = CFrame.new(targetPos + randomOffset(0.2))}
+        )
+        tween:Play()
+        task.wait(duration + 0.05)
     end)
-    if not tweenOk then dbg("smoothApproach tween error: "..tostring(err)) end
+    
     hrp = getRootPart(LocalPlayer.Character)
     return hrp and ((hrp.Position - targetPos).Magnitude <= Settings.MoveStopDistance)
 end
 
--- Proximity prompt interaction (ORIGINAL - NOT REMOVED)
+-- Proximity prompt interaction
 local function interactPrompt(prompt)
     if not prompt then return false end
     if typeof(fireproximityprompt) == "function" then
@@ -297,11 +517,7 @@ local function interactPrompt(prompt)
     end
     if prompt:IsA("ProximityPrompt") then
         pcall(function()
-            if prompt.InputHoldBegin and prompt.InputHoldEnd then
-                prompt:InputHoldBegin()
-                task.wait(0.05)
-                prompt:InputHoldEnd()
-            else
+            if prompt.InputHoldEnd then
                 prompt:InputHoldEnd()
             end
         end)
@@ -310,47 +526,35 @@ local function interactPrompt(prompt)
     return false
 end
 
--- Scanning items for AutoFarm (ORIGINAL - NOT REMOVED)
+-- Scan for pickups
 local function scanForPickups()
     local items = {}
     local containers = {}
-    if workspace:FindFirstChild("Item_Spawns") then table.insert(containers, workspace.Item_Spawns) end
-    if workspace:FindFirstChild("Items") then table.insert(containers, workspace.Items) end
+    
+    if workspace:FindFirstChild("Item_Spawns") then 
+        table.insert(containers, workspace.Item_Spawns) 
+    end
+    if workspace:FindFirstChild("Items") then 
+        table.insert(containers, workspace.Items) 
+    end
     table.insert(containers, workspace)
 
     local function considerModel(m)
-        if not m then return end
-        if items[m] then return end
+        if not m or items[m] then return end
+        
         local primary = m.PrimaryPart or m:FindFirstChildWhichIsA("BasePart")
-        local prompt = nil
-        for _, d in ipairs(m:GetDescendants()) do
-            if d:IsA("ProximityPrompt") then
-                prompt = d
-                break
-            end
-        end
+        local prompt = m:FindFirstChildWhichIsA("ProximityPrompt", true)
+        
         if primary and prompt then
             items[m] = {Model = m, Primary = primary, Prompt = prompt}
-            return
-        end
-        if m:IsA("BasePart") then
-            local p = m:FindFirstChildWhichIsA("ProximityPrompt")
-            if p then
-                items[m] = {Model = m, Primary = m, Prompt = p}
-            end
         end
     end
 
     for _, container in ipairs(containers) do
-        if container and container:IsA and container:IsA("Instance") then
+        if container then
             for _, obj in ipairs(container:GetDescendants()) do
-                if obj:IsA("Model") then
+                if obj:IsA("Model") or obj:IsA("BasePart") then
                     considerModel(obj)
-                elseif obj:IsA("BasePart") and obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                    considerModel(obj)
-                elseif obj:IsA("ProximityPrompt") then
-                    local mdl = obj.Parent and obj.Parent:FindFirstAncestorWhichIsA("Model")
-                    if mdl then considerModel(mdl) else considerModel(obj.Parent) end
                 end
             end
         end
@@ -359,43 +563,36 @@ local function scanForPickups()
     return items
 end
 
--- Auto loops (ORIGINAL - NOT REMOVED, ALL FEATURES INTACT)
+-- Auto loops
 local autoFarmThread
 local function startAutoFarm()
     if autoFarmThread then return end
     autoFarmThread = task.spawn(function()
-        dbg("AutoFarm started")
+        dbg("AutoFarm запущен")
         while Settings.AutoFarm do
-            if not LocalPlayer.Character then
-                task.wait(0.5)
-            else
-                local hrp = getRootPart(LocalPlayer.Character)
+            local char = LocalPlayer.Character
+            if char then
+                local hrp = getRootPart(char)
                 if hrp then
                     local items = scanForPickups()
                     for model, info in pairs(items) do
                         if not Settings.AutoFarm then break end
-                        if not model or not info.Primary or not info.Prompt or not info.Primary.Parent then
-                            items[model] = nil
-                        else
-                            local pos = info.Primary.Position
-                            local approached = false
-                            local ok, err = pcall(function() approached = smoothApproach(pos) end)
-                            if not ok then
-                                dbg("AutoFarm: smoothApproach pcall error: "..tostring(err))
-                                approached = false
-                            end
+                        if model and info.Primary and info.Prompt and info.Primary.Parent then
+                            local approached = pcall(function() 
+                                return smoothApproach(info.Primary.Position) 
+                            end)
                             if approached then
-                                pcall(function() interactPrompt(info.Prompt) end)
-                                task.wait(0.08 + math.random() * 0.08)
+                                interactPrompt(info.Prompt)
+                                task.wait(0.1)
                             end
                         end
-                        task.wait(0.04)
+                        task.wait(0.05)
                     end
                 end
-                task.wait(Settings.AutoFarmScanInterval)
             end
+            task.wait(Settings.AutoFarmScanInterval)
         end
-        dbg("AutoFarm stopped")
+        dbg("AutoFarm остановлен")
         autoFarmThread = nil
     end)
 end
@@ -406,57 +603,18 @@ local function stopAutoFarm()
 end
 
 local autoSellThread
-local function attemptSellViaRemote()
-    if Remotes.Sell then
-        local ok = safeFire(Remotes.Sell, "SellAll")
-        if ok then return true end
-        ok = safeFire(Remotes.Sell, "Sell")
-        if ok then return true end
-        ok = safeFire(Remotes.Sell, "SellEverything")
-        if ok then return true end
-        pcall(function() Remotes.Sell:FireServer() end)
-        return true
-    end
-    return false
-end
-
 local function startAutoSell()
     if autoSellThread then return end
     autoSellThread = task.spawn(function()
-        dbg("AutoSell started")
+        dbg("AutoSell запущен")
         while Settings.AutoSell do
-            local did = false
-            if attemptSellViaRemote() then
-                did = true
+            if Remotes.Sell then
+                safeFire(Remotes.Sell, "SellAll")
                 dbg("AutoSell: remote fired")
-            else
-                local hrp = LocalPlayer.Character and getRootPart(LocalPlayer.Character)
-                if hrp then
-                    for _, obj in ipairs(workspace:GetDescendants()) do
-                        if obj:IsA("ProximityPrompt") then
-                            local text = tostring(obj.ObjectText or obj.Name or ""):lower()
-                            if string.find(text, "sell") or string.find(text, "vendor") or string.find(text, "merchant") then
-                                local parentPart = obj.Parent
-                                if parentPart and parentPart:IsA("BasePart") then
-                                    if (parentPart.Position - hrp.Position).Magnitude < Settings.PromptSearchDistance then
-                                        local okApproach = smoothApproach(parentPart.Position)
-                                        if okApproach then
-                                            interactPrompt(obj)
-                                            did = true
-                                            dbg("AutoSell: used prompt at "..parentPart:GetFullName())
-                                            break
-                                        end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
             end
-            if not did then dbg("AutoSell: nothing found this cycle") end
-            task.wait(Settings.AutoSellInterval + math.random() * 0.6)
+            task.wait(Settings.AutoSellInterval)
         end
-        dbg("AutoSell stopped")
+        dbg("AutoSell остановлен")
         autoSellThread = nil
     end)
 end
@@ -467,52 +625,18 @@ local function stopAutoSell()
 end
 
 local autoLuckyThread
-local function attemptBuyViaRemote()
-    if Remotes.Buy then
-        local ok = safeFire(Remotes.Buy, "BuyItem", "Lucky")
-        if ok then return true end
-        ok = safeFire(Remotes.Buy, "Buy", "Lucky")
-        if ok then return true end
-        ok = safeFire(Remotes.Buy, "Purchase", "Lucky")
-        if ok then return true end
-        pcall(function() Remotes.Buy:FireServer() end)
-        return true
-    end
-    return false
-end
-
 local function startAutoLuckyBuy()
     if autoLuckyThread then return end
     autoLuckyThread = task.spawn(function()
-        dbg("AutoLuckyBuy started")
+        dbg("AutoLuckyBuy запущен")
         while Settings.AutoLuckyBuy do
-            local did = false
-            if attemptBuyViaRemote() then
-                did = true
+            if Remotes.Buy then
+                safeFire(Remotes.Buy, "BuyItem", "Lucky")
                 dbg("AutoLuckyBuy: remote fired")
-            else
-                for _, obj in ipairs(workspace:GetDescendants()) do
-                    if obj:IsA("ProximityPrompt") then
-                        local text = tostring(obj.ObjectText or obj.Name or ""):lower()
-                        if string.find(text, "lucky") or string.find(text, "gacha") or string.find(text, "crate") then
-                            local parentPart = obj.Parent
-                            if parentPart and parentPart:IsA("BasePart") then
-                                local okApproach = smoothApproach(parentPart.Position)
-                                if okApproach then
-                                    interactPrompt(obj)
-                                    did = true
-                                    dbg("AutoLuckyBuy: used prompt at "..parentPart:GetFullName())
-                                    break
-                                end
-                            end
-                        end
-                    end
-                end
             end
-            if not did then dbg("AutoLuckyBuy: nothing found this cycle") end
-            task.wait(Settings.AutoLuckyInterval + math.random() * 0.6)
+            task.wait(Settings.AutoLuckyInterval)
         end
-        dbg("AutoLuckyBuy stopped")
+        dbg("AutoLuckyBuy остановлен")
         autoLuckyThread = nil
     end)
 end
@@ -526,29 +650,14 @@ local autoPBThread
 local function startAutoPB()
     if autoPBThread then return end
     autoPBThread = task.spawn(function()
-        dbg("AutoPB started")
+        dbg("AutoPB запущен")
         while Settings.AutoPB do
-            if not Remotes.Block then
-                Remotes.Block = tryResolveRemoteByNames(RemoteCandidates.Block)
-            end
-            local did = false
             if Remotes.Block then
-                pcall(function() Remotes.Block:FireServer("StartBlock") end)
-                did = true
-            else
-                local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    local original = humanoid.WalkSpeed
-                    humanoid.WalkSpeed = math.max(4, (original or 16) * 0.45)
-                    task.wait(0.06 + math.random() * 0.08)
-                    if humanoid then humanoid.WalkSpeed = original end
-                    did = true
-                end
+                safeFire(Remotes.Block, "StartBlock")
             end
-            if not did then dbg("AutoPB: no action this tick") end
-            task.wait(Settings.AutoPBInterval + math.random() * 0.03)
+            task.wait(Settings.AutoPBInterval)
         end
-        dbg("AutoPB stopped")
+        dbg("AutoPB остановлен")
         autoPBThread = nil
     end)
 end
@@ -558,13 +667,12 @@ local function stopAutoPB()
     autoPBThread = nil
 end
 
--- Chams (Highlights) - ORIGINAL, NOT REMOVED
+-- Chams
 local Highlights = {}
 local function setupHighlightForPlayer(player)
     if player == LocalPlayer then return end
     if Highlights[player] then
         pcall(function() Highlights[player]:Destroy() end)
-        Highlights[player] = nil
     end
     if player.Character then
         local highlight = Instance.new("Highlight")
@@ -576,23 +684,13 @@ local function setupHighlightForPlayer(player)
         highlight.Enabled = Settings.Chams
         Highlights[player] = highlight
     end
-    player.CharacterAdded:Connect(function()
-        if Settings.Chams then
-            task.delay(0.05, function() setupHighlightForPlayer(player) end)
-        end
-    end)
 end
 
 local function enableChams()
     Settings.Chams = true
-    for _, p in ipairs(Players:GetPlayers()) do setupHighlightForPlayer(p) end
-    Players.PlayerAdded:Connect(setupHighlightForPlayer)
-    Players.PlayerRemoving:Connect(function(pl)
-        if Highlights[pl] then
-            pcall(function() Highlights[pl]:Destroy() end)
-            Highlights[pl] = nil
-        end
-    end)
+    for _, p in ipairs(Players:GetPlayers()) do 
+        setupHighlightForPlayer(p) 
+    end
 end
 
 local function disableChams()
@@ -603,20 +701,24 @@ local function disableChams()
     Highlights = {}
 end
 
--- Aim Assist - ORIGINAL, NOT REMOVED
+-- Aim Assist
 local function findClosestTarget()
     local myHRP = LocalPlayer.Character and getRootPart(LocalPlayer.Character)
     if not myHRP then return nil end
     local best = nil
     local bestDist = Settings.AimFOV
+    
     for _, pl in ipairs(Players:GetPlayers()) do
-        if pl ~= LocalPlayer and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid") and pl.Character.Humanoid.Health > 0 then
-            local hrp = getRootPart(pl.Character)
-            if hrp then
-                local dist = (hrp.Position - myHRP.Position).Magnitude
-                if dist <= bestDist then
-                    bestDist = dist
-                    best = hrp
+        if pl ~= LocalPlayer and pl.Character then
+            local humanoid = pl.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local hrp = getRootPart(pl.Character)
+                if hrp then
+                    local dist = (hrp.Position - myHRP.Position).Magnitude
+                    if dist <= bestDist then
+                        bestDist = dist
+                        best = hrp
+                    end
                 end
             end
         end
@@ -635,120 +737,128 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Friend list utilities - ORIGINAL, NOT REMOVED
-local function isFriendWithLocal(player)
-    if not player or not player.UserId then return false end
-    local ok, res = pcall(function() return LocalPlayer:IsFriendsWith(player.UserId) end)
-    if ok then return res else return false end
-end
-
--- ==================== IMPROVED GOTO WITH BYPASS ====================
+-- Goto player
 local function gotoPlayer(player)
-    if not player or not player.Character then
-        dbg("Goto failed: target invalid")
-        return false
-    end
+    if not player or not player.Character then return false end
     local targetHRP = getRootPart(player.Character)
-    if not targetHRP then
-        dbg("Goto failed: target has no root part")
-        return false
-    end
-    if not LocalPlayer.Character then
-        dbg("Goto failed: local character missing")
-        return false
-    end
-
+    if not targetHRP then return false end
+    
     local offsetDirs = {Vector3.new(3,0,0), Vector3.new(-3,0,0), Vector3.new(0,0,3), Vector3.new(0,0,-3)}
-    local chosenOffset = offsetDirs[math.random(1, #offsetDirs)]
-    local targetPos = targetHRP.Position + chosenOffset
+    local targetPos = targetHRP.Position + offsetDirs[math.random(1, #offsetDirs)]
 
-    -- ===== НОВЫЙ МЕТОД: ИСПОЛЬЗУЕМ BYPASS ТЕЛЕПОРТАЦИЮ =====
     if NamecallBypassRemote and isHooked then
-        dbg("Using bypass teleport for Goto")
         local success = teleportToPosition(targetPos)
         if success then
-            dbg("Goto: teleported to "..player.Name.." using bypass")
+            dbg("Goto: телепорт к "..player.Name)
             return true
-        else
-            dbg("Goto: bypass teleport failed, trying pathfinding")
         end
     end
 
-    -- Fallback: старый метод с pathfinding (если bypass недоступен)
-    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    local originalSpeed
-    if humanoid then
-        originalSpeed = humanoid.WalkSpeed
-        humanoid.WalkSpeed = math.clamp((originalSpeed or 16) * 1.6, 12, 60)
-    end
-
-    local approached = false
-    local ok, err = pcall(function()
-        approached = smoothApproach(targetPos)
+    local approached = pcall(function() 
+        return smoothApproach(targetPos) 
     end)
-    if not ok then
-        dbg("gotoPlayer: smoothApproach pcall error: "..tostring(err))
-        approached = false
-    end
-
-    if humanoid and originalSpeed then
-        humanoid.WalkSpeed = originalSpeed
-    end
-
+    
     if approached then
-        dbg("Goto: approached "..player.Name)
+        dbg("Goto: подошел к "..player.Name)
         return true
-    else
-        dbg("Goto: failed to approach "..player.Name)
-        return false
     end
+    
+    return false
 end
 
--- GUI creation (ORIGINAL - ALL INTACT, NOT REMOVED)
-local GuiParent = CoreGui
+-- ============ GUI CREATION (ИСПРАВЛЕНО) ============
+dbg("Создание GUI...")
+
+-- Определяем родителя для GUI
+local GuiParent = game:GetService("CoreGui")
 local testOk = pcall(function()
     local t = Instance.new("ScreenGui")
     t.Name = "UH_Test"
     t.Parent = GuiParent
+    task.wait()
     t:Destroy()
 end)
-if not testOk then GuiParent = LocalPlayer:WaitForChild("PlayerGui") end
 
-local ScreenGui = new(GuiParent, "ScreenGui", {Name = "UtilityHubGUI", ResetOnSpawn = false})
+if not testOk then 
+    dbg("CoreGui недоступен, используем PlayerGui")
+    GuiParent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- Удаляем старые копии
+pcall(function()
+    local old = GuiParent:FindFirstChild("UtilityHubGUI")
+    if old then old:Destroy() end
+end)
+
+task.wait(0.1)
+
+-- Создаем GUI
+local ScreenGui = new(GuiParent, "ScreenGui", {
+    Name = "UtilityHubGUI",
+    ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    DisplayOrder = 999
+})
+
 local MainFrame = new(ScreenGui, "Frame", {
-    Size = UDim2.new(0, 520, 0, 740),
-    Position = UDim2.new(0.5, -260, 0.5, -370),
+    Size = UDim2.new(0, 520, 0, 600),
+    Position = UDim2.new(0.5, -260, 0.5, -300),
     BackgroundColor3 = Color3.fromRGB(42, 48, 60),
     BorderSizePixel = 0,
-    Visible = true
+    Visible = true,
+    Active = true,
+    Draggable = true
 })
+
 new(MainFrame, "UICorner", {CornerRadius = UDim.new(0, 12)})
-new(MainFrame, "UIStroke", {Color = Color3.fromRGB(60, 68, 82), Thickness = 1, Transparency = 0.7})
 
 local Header = new(MainFrame, "TextLabel", {
-    Size = UDim2.new(1, -24, 0, 48),
+    Size = UDim2.new(1, -24, 0, 40),
     Position = UDim2.new(0, 12, 0, 8),
     BackgroundTransparency = 1,
-    Text = "Utility Hub (Enhanced Goto)",
+    Text = "🛠️ Utility Hub (Fixed)",
     TextColor3 = Color3.fromRGB(230, 230, 230),
     Font = Enum.Font.GothamBold,
-    TextSize = 20,
+    TextSize = 18,
     TextXAlignment = Enum.TextXAlignment.Left
 })
 
+local CloseBtn = new(MainFrame, "TextButton", {
+    Size = UDim2.new(0, 30, 0, 30),
+    Position = UDim2.new(1, -40, 0, 10),
+    BackgroundColor3 = Color3.fromRGB(200, 50, 50),
+    Text = "X",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 16
+})
+new(CloseBtn, "UICorner", {CornerRadius = UDim.new(0, 8)})
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+end)
+
 local Content = new(MainFrame, "ScrollingFrame", {
-    Size = UDim2.new(1, -24, 1, -88),
+    Size = UDim2.new(1, -24, 1, -70),
     Position = UDim2.new(0, 12, 0, 56),
     BackgroundTransparency = 1,
     ScrollBarImageColor3 = Color3.fromRGB(120, 130, 150),
-    ScrollBarThickness = 10
+    ScrollBarThickness = 8,
+    BorderSizePixel = 0
 })
-new(Content, "UIListLayout", {Padding = UDim.new(0, 8)})
+
+local Layout = new(Content, "UIListLayout", {
+    Padding = UDim.new(0, 8),
+    SortOrder = Enum.SortOrder.LayoutOrder
+})
+
 Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
+dbg("GUI создан успешно!")
+
+-- Helper functions для создания элементов
 local function createSectionLabel(text)
-    return new(Content, "TextLabel", {
-        Size = UDim2.new(1, 0, 0, 22),
+    local label = new(Content, "TextLabel", {
+        Size = UDim2.new(1, 0, 0, 24),
         BackgroundTransparency = 1,
         Text = text,
         TextColor3 = Color3.fromRGB(220, 220, 220),
@@ -756,132 +866,88 @@ local function createSectionLabel(text)
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left
     })
+    return label
 end
 
 local function createToggle(text, initial, callback)
-    local frame = new(Content, "Frame", {Size = UDim2.new(1, 0, 0, 44), BackgroundColor3 = Color3.fromRGB(56, 62, 74)})
+    local frame = new(Content, "Frame", {
+        Size = UDim2.new(1, 0, 0, 44),
+        BackgroundColor3 = Color3.fromRGB(56, 62, 74)
+    })
     new(frame, "UICorner", {CornerRadius = UDim.new(0, 8)})
-    new(frame, "UIStroke", {Color = Color3.fromRGB(70, 78, 92), Thickness = 1, Transparency = 0.7})
-    new(frame, "TextLabel", {
+    
+    local label = new(frame, "TextLabel", {
         Text = text,
         BackgroundTransparency = 1,
         Font = Enum.Font.Gotham,
-        TextSize = 14,
-        TextColor3 = Color3.fromRGB(235,235,235),
-        Position = UDim2.new(0, 12, 0, 8),
-        Size = UDim2.new(0.7, -12, 1, -16),
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(235, 235, 235),
+        Position = UDim2.new(0, 12, 0, 0),
+        Size = UDim2.new(0.65, 0, 1, 0),
         TextXAlignment = Enum.TextXAlignment.Left
     })
+    
     local btn = new(frame, "TextButton", {
-        Size = UDim2.new(0, 96, 0, 28),
-        Position = UDim2.new(1, -110, 0.5, -14),
-        BackgroundColor3 = initial and Color3.fromRGB(0,160,230) or Color3.fromRGB(88, 96, 110),
+        Size = UDim2.new(0, 80, 0, 28),
+        Position = UDim2.new(1, -90, 0.5, -14),
+        BackgroundColor3 = initial and Color3.fromRGB(0, 160, 230) or Color3.fromRGB(88, 96, 110),
         Text = initial and "ON" or "OFF",
-        TextColor3 = Color3.fromRGB(20,20,20),
-        AutoButtonColor = false
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBold,
+        TextSize = 12
     })
-    new(btn, "UICorner", {CornerRadius = UDim.new(0, 8)})
+    new(btn, "UICorner", {CornerRadius = UDim.new(0, 6)})
+    
     btn.MouseButton1Click:Connect(function()
-        local newState = not (btn.Text == "ON")
+        local newState = (btn.Text == "OFF")
         btn.Text = newState and "ON" or "OFF"
-        btn.BackgroundColor3 = newState and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
-        pcall(function() callback(newState) end)
+        btn.BackgroundColor3 = newState and Color3.fromRGB(0, 160, 230) or Color3.fromRGB(88, 96, 110)
+        pcall(callback, newState)
     end)
+    
     return frame, btn
 end
 
-local function createButton(text, fn)
-    local frame = new(Content, "Frame", {Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Color3.fromRGB(56,62,74)})
-    new(frame, "UICorner", {CornerRadius = UDim.new(0, 8)})
-    new(frame, "UIStroke", {Color = Color3.fromRGB(70,78,92), Thickness = 1, Transparency = 0.7})
-    local btn = new(frame, "TextButton", {
-        Size = UDim2.new(1, -16, 1, -12),
-        Position = UDim2.new(0, 8, 0, 6),
-        Text = text,
-        BackgroundColor3 = Color3.fromRGB(92, 100, 116),
-        TextColor3 = Color3.fromRGB(240,240,240),
-        Font = Enum.Font.Gotham,
-        TextSize = 14
+local function createButton(text, callback)
+    local frame = new(Content, "Frame", {
+        Size = UDim2.new(1, 0, 0, 36),
+        BackgroundColor3 = Color3.fromRGB(56, 62, 74)
     })
-    new(btn, "UICorner", {CornerRadius = UDim.new(0, 8)})
-    btn.MouseButton1Click:Connect(function() pcall(fn) end)
+    new(frame, "UICorner", {CornerRadius = UDim.new(0, 8)})
+    
+    local btn = new(frame, "TextButton", {
+        Size = UDim2.new(1, -12, 1, -8),
+        Position = UDim2.new(0, 6, 0, 4),
+        Text = text,
+        BackgroundColor3 = Color3.fromRGB(80, 100, 140),
+        TextColor3 = Color3.fromRGB(240, 240, 240),
+        Font = Enum.Font.Gotham,
+        TextSize = 13
+    })
+    new(btn, "UICorner", {CornerRadius = UDim.new(0, 6)})
+    
+    btn.MouseButton1Click:Connect(function()
+        pcall(callback)
+    end)
+    
     return frame, btn
 end
 
-local function createSlider(text, min, max, default, callback)
-    local frame = new(Content, "Frame", {Size = UDim2.new(1, 0, 0, 66), BackgroundColor3 = Color3.fromRGB(56,62,74)})
-    new(frame, "UICorner", {CornerRadius = UDim.new(0, 8)})
-    new(frame, "UIStroke", {Color = Color3.fromRGB(70,78,92), Thickness = 1, Transparency = 0.7})
-    new(frame, "TextLabel", {Text = text, BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(235,235,235), Font = Enum.Font.Gotham, TextSize = 13, Position = UDim2.new(0, 12, 0, 8)})
-    local valueLabel = new(frame, "TextLabel", {Text = tostring(default), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(200,200,200), Font = Enum.Font.GothamBold, TextSize = 13, Position = UDim2.new(1, -66, 0, 8), Size = UDim2.new(0, 54, 0, 18)})
-    local back = new(frame, "Frame", {Size = UDim2.new(1, -24, 0, 12), Position = UDim2.new(0, 12, 0, 36), BackgroundColor3 = Color3.fromRGB(80,88,100)})
-    new(back, "UICorner", {CornerRadius = UDim.new(1, 0)})
-    local fill = new(back, "Frame", {Size = UDim2.new((default - min) / (max - min), 0, 1, 0), BackgroundColor3 = Color3.fromRGB(0,160,230)})
-    new(fill, "UICorner", {CornerRadius = UDim.new(1, 0)})
+-- Build GUI
+dbg("Добавление элементов управления...")
 
-    local dragging = false
+createSectionLabel("⚙️ Основные функции")
 
-    back.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            UserInputService.MouseIconEnabled = true
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local abs = back.AbsolutePosition
-            local mx = UserInputService:GetMouseLocation().X
-            local rel = math.clamp((mx - abs.X) / back.AbsoluteSize.X, 0, 1)
-            fill.Size = UDim2.new(rel, 0, 1, 0)
-            local val = math.floor(min + rel * (max - min))
-            valueLabel.Text = tostring(val)
-            pcall(function() callback(val) end)
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-            UserInputService.MouseIconEnabled = true
-        end
-    end)
-
-    local function refresh()
-        local cur = tonumber(valueLabel.Text) or default
-        local rel = (cur - min) / math.max(1, (max - min))
-        fill.Size = UDim2.new(math.clamp(rel, 0, 1), 0, 1, 0)
-    end
-
-    ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(refresh)
-    Content:GetPropertyChangedSignal("AbsoluteSize"):Connect(refresh)
-    task.spawn(function()
-        while ScreenGui and ScreenGui.Parent do
-            refresh()
-            task.wait(0.9)
-        end
-    end)
-
-    return frame, valueLabel
-end
-
--- Build GUI controls (ALL ORIGINAL FEATURES)
-createSectionLabel("Core")
-local afFrame, afBtn = createToggle("AutoFarm (collect items)", false, function(state)
+local afFrame, afBtn = createToggle("AutoFarm (сбор предметов)", false, function(state)
     Settings.AutoFarm = state
     if state then
-        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            Settings.DefaultWalkspeed = humanoid.WalkSpeed or Settings.DefaultWalkspeed
-            humanoid.WalkSpeed = Settings.AutoFarmWalkspeed
-        end
         startAutoFarm()
     else
         stopAutoFarm()
-        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.WalkSpeed = Settings.DefaultWalkspeed end
     end
 end)
 
-local asFrame, asBtn = createToggle("AutoSell", false, function(state)
+local asFrame, asBtn = createToggle("AutoSell (автопродажа)", false, function(state)
     Settings.AutoSell = state
     if state then startAutoSell() else stopAutoSell() end
 end)
@@ -891,199 +957,65 @@ local alFrame, alBtn = createToggle("Auto Lucky Buy", false, function(state)
     if state then startAutoLuckyBuy() else stopAutoLuckyBuy() end
 end)
 
-local apbFrame, apbBtn = createToggle("Auto Perfect Block (safe)", false, function(state)
+local apbFrame, apbBtn = createToggle("Auto Perfect Block", false, function(state)
     Settings.AutoPB = state
     if state then startAutoPB() else stopAutoPB() end
 end)
 
-local aimFrame, aimBtn = createToggle("Aim Assist", false, function(state)
+createSectionLabel("🎯 Бой")
+
+local aimFrame, aimBtn = createToggle("Aim Assist (автонаведение)", false, function(state)
     Settings.AimAssist = state
 end)
 
-local sliderFrame, sliderValue = createSlider("Aim FOV (studs)", 30, 600, Settings.AimFOV, function(val)
-    Settings.AimFOV = val
-end)
-createSlider("Aim Smoothing (0-100)", 0, 100, math.floor(Settings.AimSmoothing * 100), function(val)
-    Settings.AimSmoothing = math.clamp(val / 100, 0, 1)
-end)
-
-local chFrame, chBtn = createToggle("Chams (Highlight players)", false, function(state)
-    Settings.Chams = state
+local chFrame, chBtn = createToggle("Chams (подсветка игроков)", false, function(state)
     if state then enableChams() else disableChams() end
 end)
 
-createSectionLabel("Remotes & Tools")
-createButton("Scan ReplicatedStorage for Remotes", function()
-    local found = {}
-    for _, o in ipairs(ReplicatedStorage:GetDescendants()) do
-        if isRemoteObject(o) then found[o:GetFullName()] = true end
-    end
-    local count = 0 for _ in pairs(found) do count = count + 1 end
-    dbg("ReplicatedStorage remotes found: "..tostring(count))
-end)
-createButton("Auto Resolve Common Remotes", function() autoResolveRemotes() end)
+createSectionLabel("🔧 Утилиты")
 
-createSectionLabel("Players / Friends (Enhanced Goto)")
-local playersContainer = new(Content, "Frame", {Size = UDim2.new(1,0,0,260), BackgroundTransparency = 1})
-local playersScroll = new(playersContainer, "ScrollingFrame", {Size = UDim2.new(1,0,1,0), BackgroundTransparency = 1, ScrollBarThickness = 8})
-new(playersScroll, "UIListLayout", {Padding = UDim.new(0,6)})
+createButton("🔍 Сканировать Remotes", function()
+    autoResolveRemotes()
+    dbg("Сканирование завершено")
+end)
+
+createSectionLabel("👥 Игроки")
+
+local playersContainer = new(Content, "Frame", {
+    Size = UDim2.new(1, 0, 0, 200),
+    BackgroundColor3 = Color3.fromRGB(56, 62, 74)
+})
+new(playersContainer, "UICorner", {CornerRadius = UDim.new(0, 8)})
+
+local playersScroll = new(playersContainer, "ScrollingFrame", {
+    Size = UDim2.new(1, -12, 1, -12),
+    Position = UDim2.new(0, 6, 0, 6),
+    BackgroundTransparency = 1,
+    ScrollBarThickness = 6
+})
+new(playersScroll, "UIListLayout", {Padding = UDim.new(0, 4)})
 playersScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 local PlayerEntries = {}
-local LocalSavedFriends = {}
-
-local function updateSavedFriendsLabel()
-end
 
 local function createPlayerEntry(player)
-    if PlayerEntries[player] then return end
-    local entry = new(playersScroll, "Frame", {Size = UDim2.new(1, -8, 0, 44), BackgroundColor3 = Color3.fromRGB(56,62,74)})
-    new(entry, "UICorner", {CornerRadius = UDim.new(0,6)})
-    new(entry, "UIStroke", {Color = Color3.fromRGB(70,78,92), Thickness = 1, Transparency = 0.7})
-
-    local gotoBtn = new(entry, "TextButton", {Text = "Goto", Size = UDim2.new(0, 58, 0, 28), Position = UDim2.new(0, 6, 0.5, -14), BackgroundColor3 = Color3.fromRGB(90, 140, 200), TextColor3 = Color3.fromRGB(20,20,20)})
-    new(gotoBtn, "UICorner", {CornerRadius = UDim.new(0,6)})
-
-    local nameLabel = new(entry, "TextLabel", {Text = player.Name, BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(230,230,230), Font = Enum.Font.Gotham, TextSize = 13, Position = UDim2.new(0, 74, 0, 0), Size = UDim2.new(0.45,0,1,0), TextXAlignment = Enum.TextXAlignment.Left})
-
-    local friendBadge = new(entry, "TextLabel", {Text = "", BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(180,180,180), Font = Enum.Font.Gotham, TextSize = 12, Position = UDim2.new(0.52, 8, 0, 0), Size = UDim2.new(0.22, 0, 1, 0)})
-
-    local addBtn = new(entry, "TextButton", {Text = "Add", Size = UDim2.new(0, 58, 0, 28), Position = UDim2.new(1, -70, 0.5, -14), BackgroundColor3 = Color3.fromRGB(120, 180, 120), TextColor3 = Color3.fromRGB(20,20,20)})
-    new(addBtn, "UICorner", {CornerRadius = UDim.new(0,6)})
-
-    gotoBtn.MouseButton1Click:Connect(function()
-        task.spawn(function()
-            if player and player.Character then
-                local ok = gotoPlayer(player)
-                if not ok then dbg("Goto button: failed to reach "..tostring(player.Name)) end
-            else
-                dbg("Goto button: player or character not present")
-            end
-        end)
-    end)
-
-    addBtn.MouseButton1Click:Connect(function()
-        if not LocalSavedFriends[player.UserId] then
-            LocalSavedFriends[player.UserId] = {Name = player.Name, Time = tick()}
-            addBtn.Text = "Added"
-            addBtn.BackgroundColor3 = Color3.fromRGB(180, 200, 120)
-            dbg("Added "..player.Name.." to local favorites")
-        else
-            LocalSavedFriends[player.UserId] = nil
-            addBtn.Text = "Add"
-            addBtn.BackgroundColor3 = Color3.fromRGB(120, 180, 120)
-            dbg("Removed "..player.Name.." from local favorites")
-        end
-        updateSavedFriendsLabel()
-    end)
-
-    PlayerEntries[player] = {Frame = entry, Badge = friendBadge, Goto = gotoBtn, Add = addBtn}
-    local function updateBadge()
-        local ok, res = pcall(function() return LocalPlayer:IsFriendsWith(player.UserId) end)
-        if ok and res then
-            friendBadge.Text = "Friend"
-            friendBadge.TextColor3 = Color3.fromRGB(120, 220, 140)
-        else
-            friendBadge.Text = ""
-        end
-    end
-    updateBadge()
-    player.Changed:Connect(function() updateBadge() end)
-end
-
-local function removePlayerEntry(player)
-    local e = PlayerEntries[player]
-    if e and e.Frame then
-        pcall(function() e.Frame:Destroy() end)
-    end
-    PlayerEntries[player] = nil
-    if player and player.UserId and LocalSavedFriends[player.UserId] then
-        LocalSavedFriends[player.UserId] = nil
-    end
-end
-
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then createPlayerEntry(p) end
-end
-Players.PlayerAdded:Connect(function(pl) if pl ~= LocalPlayer then createPlayerEntry(pl) end end)
-Players.PlayerRemoving:Connect(removePlayerEntry)
-
-createSectionLabel("Debug Log")
-local logFrame = new(Content, "Frame", {Size = UDim2.new(1,0,0,220), BackgroundColor3 = Color3.fromRGB(48,54,66)})
-new(logFrame, "UICorner", {CornerRadius = UDim.new(0,8)})
-local logScroll = new(logFrame, "ScrollingFrame", {Size = UDim2.new(1, -16, 1, -16), Position = UDim2.new(0,8,0,8), BackgroundTransparency = 1, ScrollBarThickness = 8})
-new(logScroll, "UIListLayout", {Padding = UDim.new(0,6)})
-logScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
-local function refreshGuiLog()
-    for _, c in ipairs(logScroll:GetChildren()) do if c:IsA("TextLabel") then c:Destroy() end end
-    local startIdx = math.max(1, #GuiLogBuffer - 150)
-    for i = startIdx, #GuiLogBuffer do
-        new(logScroll, "TextLabel", {Text = GuiLogBuffer[i], BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(200,200,200), Font = Enum.Font.Gotham, TextSize = 12, Size = UDim2.new(1, 0, 0, 16)})
-    end
-end
-
-task.spawn(function()
-    while ScreenGui and ScreenGui.Parent do
-        refreshGuiLog()
-        task.wait(0.8)
-    end
-end)
-
--- Keyboard shortcuts (ALL ORIGINAL)
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-    local key = input.KeyCode
-    if key == Settings.Keybinds.ToggleMenu then
-        MainFrame.Visible = not MainFrame.Visible
-    elseif key == Settings.Keybinds.ToggleAutoFarm then
-        afBtn:CaptureFocus()
-        Settings.AutoFarm = not Settings.AutoFarm
-        afBtn.Text = Settings.AutoFarm and "ON" or "OFF"
-        afBtn.BackgroundColor3 = Settings.AutoFarm and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
-        if Settings.AutoFarm then startAutoFarm() else stopAutoFarm() end
-    elseif key == Settings.Keybinds.ToggleAutoSell then
-        asBtn:CaptureFocus()
-        Settings.AutoSell = not Settings.AutoSell
-        asBtn.Text = Settings.AutoSell and "ON" or "OFF"
-        asBtn.BackgroundColor3 = Settings.AutoSell and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
-        if Settings.AutoSell then startAutoSell() else stopAutoSell() end
-    elseif key == Settings.Keybinds.ToggleLucky then
-        alBtn:CaptureFocus()
-        Settings.AutoLuckyBuy = not Settings.AutoLuckyBuy
-        alBtn.Text = Settings.AutoLuckyBuy and "ON" or "OFF"
-        alBtn.BackgroundColor3 = Settings.AutoLuckyBuy and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
-        if Settings.AutoLuckyBuy then startAutoLuckyBuy() else stopAutoLuckyBuy() end
-    elseif key == Settings.Keybinds.TogglePB then
-        apbBtn:CaptureFocus()
-        Settings.AutoPB = not Settings.AutoPB
-        apbBtn.Text = Settings.AutoPB and "ON" or "OFF"
-        apbBtn.BackgroundColor3 = Settings.AutoPB and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
-        if Settings.AutoPB then startAutoPB() else stopAutoPB() end
-    elseif key == Settings.Keybinds.ToggleAim then
-        aimBtn:CaptureFocus()
-        Settings.AimAssist = not Settings.AimAssist
-        aimBtn.Text = Settings.AimAssist and "ON" or "OFF"
-        aimBtn.BackgroundColor3 = Settings.AimAssist and Color3.fromRGB(0,160,230) or Color3.fromRGB(88,96,110)
-    end
-end)
-
--- Sync walk speed on respawn
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.2)
-    local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        Settings.DefaultWalkspeed = humanoid.WalkSpeed or Settings.DefaultWalkspeed
-        if Settings.AutoFarm then humanoid.WalkSpeed = Settings.AutoFarmWalkspeed end
-    end
-    -- Resolve bypass remote on respawn
-    resolveNamecallRemote()
-end)
-
--- Initial resolve
-autoResolveRemotes()
-resolveNamecallRemote()
-
-dbg("Utility Hub loaded with enhanced Goto bypass.")
-dbg("Bypass hook status: "..(isHooked and "ACTIVE" or "INACTIVE"))
+    if PlayerEntries[player] or player == LocalPlayer then return end
+    
+    local entry = new(playersScroll, "Frame", {
+        Size = UDim2.new(1, -8, 0, 36),
+        BackgroundColor3 = Color3.fromRGB(70, 76, 88)
+    })
+    new(entry, "UICorner", {CornerRadius = UDim.new(0, 6)})
+    
+    local nameLabel = new(entry, "TextLabel", {
+        Text = player.Name,
+        BackgroundTransparency = 1,
+        TextColor3 = Color3.fromRGB(230, 230, 230),
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        Position = UDim2.new(0, 8, 0, 0),
+        Size = UDim2.new(0.6, 0, 1, 0),
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+    
+    local
