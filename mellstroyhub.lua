@@ -17,37 +17,34 @@ local COLOR = {
     STATUS_OFF = Color3.fromRGB(50, 50, 55),
     TEXT_OFF = Color3.fromRGB(200, 200, 200),
     INFO_TEXT = Color3.fromRGB(120, 120, 120),
-    ESP_BOX = Color3.fromRGB(0, 255, 0),
-    ESP_TEXT = Color3.fromRGB(255, 255, 255),
 }
 
 local Settings = {
     AutoPB = false,
     GERAim = false,
-    AimLead = false,
+    LeadPrediction = false,
     ESPEnabled = false,
     PBMode = 1,
     AimFOV = 99,
     PBKey = Enum.KeyCode.F,
     GERKeyToggle = Enum.KeyCode.G,
     BlockModeKey = Enum.KeyCode.V,
-    Friends = {},
-    CustomImageId = ""
+    BackgroundImage = "",
+    ShowBackground = false,
+    Friends = {}
 }
 
 local AttackTimings = {
     ["Kick Barrage"] = 0, ["Sticky Fingers Finisher"] = 0.35, ["Gun_Shot1"] = 0.15, ["Heavy_Charge"] = 0.35, ["Erasure"] = 0.35,
-    ["Disc"] = 0.35, ["Propeller Charge"] = 0.35, ["Platinum Slam"] = 0.25, ["Chomp"] = 0.25, ["Scary Monsters Bite"] = 0.25,
+    ["Disc"] = 0.35, ["Propeller Charge"] = 0.35, ["Platinum Slam"] = 0.2, ["Chomp"] = 0.25, ["Scary Monsters Bite"] = 0.25,
     ["D4C Love Train Finisher"] = 0.35, ["D4C Finisher"] = 0.35, ["Tusk ACT 4 Finisher"] = 0.35, ["Gold Experience Finisher"] = 0.35,
     ["Gold Experience Requiem Finisher"] = 0.35, ["Scary Monsters Finisher"] = 0.35, ["White Album Finisher"] = 0.35,
     ["Star Platinum Finisher"] = 0.35, ["Star Platinum: The World Finisher"] = 0.35, ["King Crimson Finisher"] = 0.35,
     ["King Crimson Requiem Finisher"] = 0.35, ["Crazy Diamond Finisher"] = 0.35, ["The World Alternate Universe Finisher"] = 0.35,
     ["The World Finisher"] = 0.45, ["The World Finisher2"] = 0.45, ["Purple Haze Finisher"] = 0.35, ["Hermit Purple Finisher"] = 0.35,
     ["Made in Heaven Finisher"] = 0.35, ["Whitesnake Finisher"] = 0.40, ["C-Moon Finisher"] = 0.35, ["Red Hot Chili Pepper Finisher"] = 0.35,
-    ["Six Pistols Finisher"] = 0.45, ["Stone Free Finisher"] = 0.35, ["Ora Kicks"] = 0.15, ["lightning_jabs"] = 0.15,
-    ["The World Kicks"] = 0.15, ["Gravity Shift"] = 0.35, ["Surface Inversion Shift"] = 0.35, ["Star Finger"] = 0.25,
-    ["Emerald Splash"] = 0.30, ["20 Meter Radius Emerald Splash"] = 0.35, ["Pilot"] = 0.25, ["Zipper Glide"] = 0.20,
-    ["Time Stop"] = 0.40, ["Road Roller"] = 0.45, ["Chop"] = 0.25, ["Life Shot"] = 0.25,
+    ["Six Pistols Finisher"] = 0.45, ["Stone Free Finisher"] = 0.35, ["Ora Kicks"] = 0.12, ["lightning_jabs"] = 0.15,
+    ["The World Kicks"] = 0.12, ["Muda Kicks"] = 0.12,
 }
 
 local PlayerEntries = {}
@@ -57,7 +54,7 @@ local keyToRebind = nil
 local aimConnection = nil
 local remoteEvent = nil
 local clickSound = Instance.new("Sound")
-clickSound.SoundId = "rbxassetid://421058925"
+clickSound.SoundId = "rbxassetid://6895079853"
 clickSound.Volume = 0.5
 clickSound.Parent = game.SoundService
 
@@ -68,8 +65,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 380, 0, 600)
-MainFrame.Position = UDim2.new(0.5, -190, 0.5, -300)
+MainFrame.Size = UDim2.new(0, 380, 0, 620) 
+MainFrame.Position = UDim2.new(0.5, -190, 0.5, -310) 
 MainFrame.BackgroundColor3 = COLOR.BACKGROUND
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -77,17 +74,19 @@ MainFrame.Draggable = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
-local BackgroundImage = Instance.new("ImageLabel", MainFrame)
-BackgroundImage.Size = UDim2.new(1, 0, 1, 0)
-BackgroundImage.BackgroundTransparency = 1
-BackgroundImage.ImageTransparency = 0.85
-BackgroundImage.ScaleType = Enum.ScaleType.Crop
-BackgroundImage.ZIndex = 0
-
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
 Instance.new("UIStroke", MainFrame).Color = COLOR.TORNADO_GRAY
 MainFrame.UIStroke.Thickness = 1.5
 MainFrame.UIStroke.Transparency = 0.7
+
+local BackgroundImageLabel = Instance.new("ImageLabel", MainFrame)
+BackgroundImageLabel.Size = UDim2.new(1, 0, 1, 0)
+BackgroundImageLabel.BackgroundTransparency = 1
+BackgroundImageLabel.ImageTransparency = 0.7
+BackgroundImageLabel.ScaleType = Enum.ScaleType.Crop
+BackgroundImageLabel.Visible = false
+BackgroundImageLabel.ZIndex = 1
+Instance.new("UICorner", BackgroundImageLabel).CornerRadius = UDim.new(0, 15)
 
 local Gradient = Instance.new("UIGradient", MainFrame)
 Gradient.Color = ColorSequence.new{
@@ -95,11 +94,12 @@ Gradient.Color = ColorSequence.new{
     ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
 }
 Gradient.Rotation = 45
+Gradient.ZIndex = 2
 
 local TitleBar = Instance.new("Frame", MainFrame)
 TitleBar.Size = UDim2.new(1, 0, 0, 50)
 TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-TitleBar.ZIndex = 1
+TitleBar.ZIndex = 3
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 15)
 
 local Title = Instance.new("TextLabel", TitleBar)
@@ -111,7 +111,7 @@ Title.TextColor3 = COLOR.TORNADO_GRAY
 Title.TextSize = 24
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.ZIndex = 2
+Title.ZIndex = 4
 
 local Content = Instance.new("ScrollingFrame", MainFrame)
 Content.Size = UDim2.new(1, -30, 1, -100)
@@ -121,7 +121,7 @@ Content.BorderSizePixel = 0
 Content.ScrollBarThickness = 4
 Content.ScrollBarImageColor3 = COLOR.TORNADO_GRAY
 Content.AutomaticCanvasSize = Enum.AutomaticSize.None
-Content.ZIndex = 1
+Content.ZIndex = 3
 
 local ContentLayout = Instance.new("UIListLayout", Content)
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -139,7 +139,7 @@ local function createButton(text, parent, isKeyBind)
     Button.Text = ""
     Button.AutoButtonColor = false
     Button.Parent = parent
-    Button.ZIndex = 2
+    Button.ZIndex = 4
 
     Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 10)
 
@@ -152,7 +152,7 @@ local function createButton(text, parent, isKeyBind)
     ButtonText.TextSize = 16
     ButtonText.Font = Enum.Font.GothamBold
     ButtonText.TextXAlignment = Enum.TextXAlignment.Left
-    ButtonText.ZIndex = 3
+    ButtonText.ZIndex = 5
 
     local Status = Instance.new("TextLabel", Button)
     Status.Size = UDim2.new(0, 50, 0, 25)
@@ -162,7 +162,7 @@ local function createButton(text, parent, isKeyBind)
     Status.TextColor3 = COLOR.TEXT_OFF
     Status.TextSize = 12
     Status.Font = Enum.Font.GothamBold
-    Status.ZIndex = 3
+    Status.ZIndex = 5
 
     local KeyDisplay = nil
 
@@ -178,7 +178,7 @@ local function createButton(text, parent, isKeyBind)
         KeyDisplay.TextColor3 = COLOR.TORNADO_GRAY
         KeyDisplay.TextSize = 12
         KeyDisplay.Font = Enum.Font.GothamBold
-        KeyDisplay.ZIndex = 3
+        KeyDisplay.ZIndex = 5
         Instance.new("UICorner", KeyDisplay).CornerRadius = UDim.new(0, 8)
     else
         Status.Position = UDim2.new(1, -60, 0.5, -12.5)
@@ -200,7 +200,7 @@ local function createSlider(text, min, max, default, parent)
     Container.Size = UDim2.new(1, -10, 0, 60)
     Container.BackgroundColor3 = COLOR.DARK_ACCENT
     Container.BorderSizePixel = 0
-    Container.ZIndex = 2
+    Container.ZIndex = 4
     Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 10)
 
     local Label = Instance.new("TextLabel", Container)
@@ -212,7 +212,7 @@ local function createSlider(text, min, max, default, parent)
     Label.TextSize = 14
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.ZIndex = 3
+    Label.ZIndex = 5
 
     local ValueLabel = Instance.new("TextLabel", Container)
     ValueLabel.Size = UDim2.new(0, 70, 0, 25)
@@ -222,23 +222,23 @@ local function createSlider(text, min, max, default, parent)
     ValueLabel.TextColor3 = COLOR.TORNADO_GRAY
     ValueLabel.TextSize = 14
     ValueLabel.Font = Enum.Font.GothamBold
-    ValueLabel.ZIndex = 3
+    ValueLabel.ZIndex = 5
 
     local SliderBack = Instance.new("Frame", Container)
     SliderBack.Size = UDim2.new(1, -20, 0, 6)
     SliderBack.Position = UDim2.new(0, 10, 0, 40)
     SliderBack.BackgroundColor3 = COLOR.STATUS_OFF
     SliderBack.BorderSizePixel = 0
-    SliderBack.ZIndex = 3
+    SliderBack.ZIndex = 5
     Instance.new("UICorner", SliderBack).CornerRadius = UDim.new(1, 0)
 
     local SliderFill = Instance.new("Frame", SliderBack)
-    SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)  
     SliderFill.BackgroundColor3 = COLOR.ACCENT_ON
     SliderFill.BorderSizePixel = 0
-    SliderFill.ZIndex = 4
+    SliderFill.ZIndex = 6
     Instance.new("UICorner", SliderFill).CornerRadius = UDim.new(1, 0)
-
+    
     local dragging = false
     local function updateSlider(inputPos)
         local absPos = SliderBack.AbsolutePosition
@@ -248,7 +248,7 @@ local function createSlider(text, min, max, default, parent)
         ValueLabel.Text = tostring(newVal)
         Settings.AimFOV = newVal
     end
-
+    
     SliderBack.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
@@ -271,10 +271,10 @@ end
 
 local function createTextBox(text, parent)
     local Container = Instance.new("Frame", parent)
-    Container.Size = UDim2.new(1, -10, 0, 60)
+    Container.Size = UDim2.new(1, -10, 0, 70)
     Container.BackgroundColor3 = COLOR.DARK_ACCENT
     Container.BorderSizePixel = 0
-    Container.ZIndex = 2
+    Container.ZIndex = 4
     Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 10)
 
     local Label = Instance.new("TextLabel", Container)
@@ -286,21 +286,21 @@ local function createTextBox(text, parent)
     Label.TextSize = 14
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.ZIndex = 3
+    Label.ZIndex = 5
 
     local TextBox = Instance.new("TextBox", Container)
-    TextBox.Size = UDim2.new(1, -20, 0, 25)
-    TextBox.Position = UDim2.new(0, 10, 0, 28)
+    TextBox.Size = UDim2.new(1, -20, 0, 30)
+    TextBox.Position = UDim2.new(0, 10, 0, 30)
     TextBox.BackgroundColor3 = COLOR.STATUS_OFF
     TextBox.BorderSizePixel = 0
     TextBox.Text = ""
-    TextBox.PlaceholderText = "Asset ID (e.g., 123456789)"
+    TextBox.PlaceholderText = "Image URL..."
     TextBox.TextColor3 = COLOR.TEXT_BRIGHT
     TextBox.PlaceholderColor3 = COLOR.INFO_TEXT
     TextBox.TextSize = 12
     TextBox.Font = Enum.Font.Gotham
     TextBox.ClearTextOnFocus = false
-    TextBox.ZIndex = 3
+    TextBox.ZIndex = 5
     Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 8)
 
     return Container, TextBox
@@ -310,12 +310,23 @@ local AutoPBButton, AutoPBStatus, AutoPBKeyDisplay = createButton("Auto Perfect 
 AutoPBKeyDisplay.Text = Settings.PBKey.Name
 local GERAimButton, GERAimStatus, GERAimKeyDisplay = createButton("GER Aim Toggle", Content, true)
 GERAimKeyDisplay.Text = Settings.GERKeyToggle.Name
-local AimLeadButton, AimLeadStatus = createButton("Aim Lead Target", Content, false)
 local PBModeButton, PBModeStatus, PBModeKeyDisplay = createButton("Block Mode", Content, true)
 PBModeKeyDisplay.Text = Settings.BlockModeKey.Name
-local ESPButton, ESPStatus = createButton("ESP Toggle", Content, false)
-local FOVSlider, FOVValue = createSlider("Aim FOV (studs)", 30, 500, Settings.AimFOV, Content)
-local ImageContainer, ImageTextBox = createTextBox("Custom Background Image", Content)
+local LeadPredButton, LeadPredStatus = createButton("Lead Prediction", Content, false)
+local ESPButton, ESPStatus = createButton("ESP Enable", Content, false)
+local FOVSlider, FOVValue = createSlider("Aim FOV (studs)", 30, 500, Settings.AimFOV, Content) 
+
+local BGTitle = Instance.new("TextLabel", Content)
+BGTitle.Size = UDim2.new(1, -10, 0, 25)
+BGTitle.BackgroundTransparency = 1
+BGTitle.Text = "Background Image"
+BGTitle.TextColor3 = COLOR.TORNADO_GRAY
+BGTitle.Font = Enum.Font.GothamBold
+BGTitle.TextSize = 16
+BGTitle.ZIndex = 4
+
+local BGContainer, BGTextBox = createTextBox("Image URL", Content)
+local BGToggleButton, BGToggleStatus = createButton("Show Background", Content, false)
 
 local FriendsTitle = Instance.new("TextLabel", Content)
 FriendsTitle.Size = UDim2.new(1, -10, 0, 30)
@@ -324,15 +335,15 @@ FriendsTitle.Text = "Server Players"
 FriendsTitle.TextColor3 = COLOR.TORNADO_GRAY
 FriendsTitle.Font = Enum.Font.GothamBold
 FriendsTitle.TextSize = 18
-FriendsTitle.ZIndex = 2
+FriendsTitle.ZIndex = 4
 
 local PlayerListFrame = Instance.new("ScrollingFrame", Content)
-PlayerListFrame.Size = UDim2.new(1, -10, 0, 150)
+PlayerListFrame.Size = UDim2.new(1, -10, 0, 150) 
 PlayerListFrame.BackgroundTransparency = 1
-PlayerListFrame.BorderSizePixel = 0
-PlayerListFrame.ScrollBarThickness = 4
+PlayerListFrame.BorderSizePixel = 0 
+PlayerListFrame.ScrollBarThickness = 4 
 PlayerListFrame.ScrollBarImageColor3 = COLOR.TORNADO_GRAY
-PlayerListFrame.ZIndex = 2
+PlayerListFrame.ZIndex = 4
 local PlayerListLayout = Instance.new("UIListLayout", PlayerListFrame)
 PlayerListLayout.Padding = UDim.new(0, 5)
 PlayerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -341,30 +352,19 @@ local Footer = Instance.new("Frame", MainFrame)
 Footer.Size = UDim2.new(1, 0, 0, 40)
 Footer.Position = UDim2.new(0, 0, 1, -40)
 Footer.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-Footer.ZIndex = 1
+Footer.ZIndex = 3
 Instance.new("UICorner", Footer).CornerRadius = UDim.new(0, 15)
 
 local InfoText = Instance.new("TextLabel", Footer)
 InfoText.Size = UDim2.new(1, -20, 1, 0)
 InfoText.Position = UDim2.new(0, 10, 0, 0)
 InfoText.BackgroundTransparency = 1
-InfoText.Text = "RightShift - Menu | F/G/V - Toggle | X - GER Aim"
+InfoText.Text = "RightShift - Menu | F/G/V - Toggles | X - Use GER Aim"
 InfoText.TextColor3 = COLOR.INFO_TEXT
 InfoText.TextSize = 12
 InfoText.Font = Enum.Font.Gotham
 InfoText.TextXAlignment = Enum.TextXAlignment.Left
-InfoText.ZIndex = 2
-
-ImageTextBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed and ImageTextBox.Text ~= "" then
-        local assetId = ImageTextBox.Text:match("%d+")
-        if assetId then
-            Settings.CustomImageId = assetId
-            BackgroundImage.Image = "rbxassetid://" .. assetId
-            playClickSound()
-        end
-    end
-end)
+InfoText.ZIndex = 4
 
 local function updateCanvasSizes()
     task.wait()
@@ -398,12 +398,12 @@ end
 
 local function createPlayerEntry(player)
     if PlayerEntries[player] then return end
-
+    
     local Entry = Instance.new("Frame", PlayerListFrame)
     Entry.Size = UDim2.new(1, 0, 0, 35)
     Entry.BackgroundColor3 = COLOR.DARK_ACCENT
     Entry.BorderSizePixel = 0
-    Entry.ZIndex = 3
+    Entry.ZIndex = 5
     Instance.new("UICorner", Entry).CornerRadius = UDim.new(0, 8)
 
     local NameLabel = Instance.new("TextLabel", Entry)
@@ -415,7 +415,7 @@ local function createPlayerEntry(player)
     NameLabel.Font = Enum.Font.Gotham
     NameLabel.TextSize = 14
     NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    NameLabel.ZIndex = 4
+    NameLabel.ZIndex = 6
 
     local FriendButton = Instance.new("TextButton", Entry)
     FriendButton.Size = UDim2.new(0, 70, 0, 25)
@@ -423,7 +423,7 @@ local function createPlayerEntry(player)
     FriendButton.BorderSizePixel = 0
     FriendButton.Font = Enum.Font.GothamBold
     FriendButton.TextSize = 12
-    FriendButton.ZIndex = 4
+    FriendButton.ZIndex = 6
     Instance.new("UICorner", FriendButton).CornerRadius = UDim.new(0, 6)
 
     updateFriendButton(FriendButton, player.Name)
@@ -431,9 +431,8 @@ local function createPlayerEntry(player)
     FriendButton.MouseButton1Click:Connect(function()
         Settings.Friends[player.Name] = not Settings.Friends[player.Name]
         updateFriendButton(FriendButton, player.Name)
-        playClickSound()
     end)
-
+    
     PlayerEntries[player] = Entry
     updateCanvasSizes()
 end
@@ -447,44 +446,146 @@ local function removePlayerEntry(player)
     Settings.Friends[player.Name] = nil
 end
 
-local function createESP(player)
-    if ESPObjects[player] or player == LocalPlayer then return end
-
-    local espFolder = Instance.new("Folder")
-    espFolder.Name = "ESP_" .. player.Name
-    espFolder.Parent = game.CoreGui
-
-    ESPObjects[player] = {Folder = espFolder, Drawings = {}}
-
-    local function updateESP()
-        if not Settings.ESPEnabled or not player.Character then
-            for _, drawing in pairs(ESPObjects[player].Drawings) do
-                if drawing then drawing.Visible = false end
-            end
-            return
+local function clearESP()
+    for _, espObj in pairs(ESPObjects) do
+        for _, drawing in pairs(espObj) do
+            if drawing then drawing:Remove() end
         end
+    end
+    ESPObjects = {}
+end
 
-        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-        local head = player.Character:FindFirstChild("Head")
-        local humanoid = player.Character:FindFirstChild("Humanoid")
+local function createESPForPlayer(player)
+    if ESPObjects[player] or not player.Character then return end
+    
+    local Box = Drawing.new("Square")
+    Box.Visible = false
+    Box.Color = Color3.new(1, 1, 1)
+    Box.Thickness = 2
+    Box.Transparency = 1
+    Box.Filled = false
+    
+    local NameTag = Drawing.new("Text")
+    NameTag.Visible = false
+    NameTag.Color = Color3.new(1, 1, 1)
+    NameTag.Size = 16
+    NameTag.Center = true
+    NameTag.Outline = true
+    NameTag.Text = player.Name
+    
+    local Tracer = Drawing.new("Line")
+    Tracer.Visible = false
+    Tracer.Color = Color3.new(1, 1, 1)
+    Tracer.Thickness = 1
+    Tracer.Transparency = 1
+    
+    local Distance = Drawing.new("Text")
+    Distance.Visible = false
+    Distance.Color = Color3.new(1, 1, 1)
+    Distance.Size = 14
+    Distance.Center = true
+    Distance.Outline = true
+    
+    ESPObjects[player] = {Box = Box, NameTag = NameTag, Tracer = Tracer, Distance = Distance}
+end
 
-        if not hrp or not head or not humanoid or humanoid.Health <= 0 then
-            for _, drawing in pairs(ESPObjects[player].Drawings) do
-                if drawing then drawing.Visible = false end
+local function updateESP()
+    if not Settings.ESPEnabled then
+        clearESP()
+        return
+    end
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            if not ESPObjects[player] then
+                createESPForPlayer(player)
             end
-            return
+            
+            local character = player.Character
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character:FindFirstChild("Humanoid")
+            
+            if hrp and humanoid and humanoid.Health > 0 then
+                local espObj = ESPObjects[player]
+                local vector, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                
+                if onScreen then
+                    local headPos = character:FindFirstChild("Head")
+                    if headPos then
+                        local headVector = Camera:WorldToViewportPoint(headPos.Position + Vector3.new(0, 0.5, 0))
+                        local legVector = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                        
+                        local height = math.abs(headVector.Y - legVector.Y)
+                        local width = height / 2
+                        
+                        espObj.Box.Size = Vector2.new(width, height)
+                        espObj.Box.Position = Vector2.new(vector.X - width / 2, headVector.Y)
+                        espObj.Box.Visible = true
+                        
+                        espObj.NameTag.Position = Vector2.new(vector.X, headVector.Y - 20)
+                        espObj.NameTag.Visible = true
+                        
+                        espObj.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                        espObj.Tracer.To = Vector2.new(vector.X, legVector.Y)
+                        espObj.Tracer.Visible = true
+                        
+                        local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if myHRP then
+                            local dist = math.floor((myHRP.Position - hrp.Position).Magnitude)
+                            espObj.Distance.Text = tostring(dist) .. " studs"
+                            espObj.Distance.Position = Vector2.new(vector.X, legVector.Y + 5)
+                            espObj.Distance.Visible = true
+                        end
+                    end
+                else
+                    espObj.Box.Visible = false
+                    espObj.NameTag.Visible = false
+                    espObj.Tracer.Visible = false
+                    espObj.Distance.Visible = false
+                end
+            end
         end
+    end
+end
 
-        local vector, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-        local headVector = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1, 0))
-        local legVector = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+local function checkSound(soundID)
+    local soundsFolder = game.ReplicatedStorage:FindFirstChild("Sounds")
+    if not soundsFolder then return nil end
 
-        if onScreen then
-            local distance = (myHRP.Position - targetHRP.Position).Magnitude
-    if distance < 30 then
+    for _, v in soundsFolder:GetChildren() do
+        if v:IsA("Sound") and v.SoundId == soundID then return v.Name end
+    end
+    return nil
+end
+
+local function performBlock(mode)
+    local character = LocalPlayer.Character
+    if not character or not remoteEvent then return end
+
+    pcall(function()
+        if mode == 2 then
+            remoteEvent:FireServer("InputEnded", {Input = Enum.KeyCode.E})
+            remoteEvent:FireServer("InputEnded", {Input = Enum.KeyCode.R})
+            task.wait(0.03)
+        end
+        remoteEvent:FireServer("StartBlocking")
+        task.wait(0.48)
+        remoteEvent:FireServer("StopBlocking")
+    end)
+end
+
+local function checkPBMove(character, moveName)
+    if not Settings.AutoPB or not AttackTimings[moveName] then return end
+    
+    local targetHRP = character:FindFirstChild("HumanoidRootPart")
+    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myHRP or not targetHRP then return end
+    
+    local distance = (myHRP.Position - targetHRP.Position).Magnitude
+    if distance < 35 then 
         task.spawn(function()
             task.wait(AttackTimings[moveName])
-            performBlock(Settings.PBMode)
+            performBlock(Settings.PBMode) 
         end)
     end
 end
@@ -500,7 +601,7 @@ local function getClosestPlayer()
             local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
             if humanoid and humanoid.Health > 0 and rootPart then
                 local dist = (myHRP.Position - rootPart.Position).Magnitude
-                if dist < shortestDist and dist < Settings.AimFOV then
+                if dist < shortestDist and dist < Settings.AimFOV then 
                     closest = player
                     shortestDist = dist
                 end
@@ -510,16 +611,32 @@ local function getClosestPlayer()
     return closest
 end
 
+local function getPredictedPosition(targetHRP)
+    if not Settings.LeadPrediction then return targetHRP.Position end
+    
+    local velocity = targetHRP.AssemblyLinearVelocity or targetHRP.Velocity
+    if velocity then
+        return targetHRP.Position + (velocity * 0.1)
+    end
+    return targetHRP.Position
+end
+
 local function setupPlayer(player)
     if not player.Character then return end
 
-    player.Character.DescendantAdded:Connect(function(child)
+    local connection
+    connection = player.Character.DescendantAdded:Connect(function(child)
         if Settings.AutoPB and child:IsA("Sound") and child.SoundId then
+            task.wait(0.05)
             local moveName = checkSound(child.SoundId)
-            if moveName then
+            if moveName then 
                 checkPBMove(player.Character, moveName)
             end
         end
+    end)
+    
+    player.CharacterRemoving:Connect(function()
+        if connection then connection:Disconnect() end
     end)
 end
 
@@ -539,10 +656,6 @@ GERAimButton.MouseButton1Click:Connect(function()
     end
 end)
 
-AimLeadButton.MouseButton1Click:Connect(function()
-    toggleFeature("AimLead", AimLeadStatus)
-end)
-
 PBModeButton.MouseButton1Click:Connect(function()
     if not isListeningForKey and (not PBModeKeyDisplay or UserInputService:GetMouseLocation().X < PBModeKeyDisplay.AbsolutePosition.X) then
         Settings.PBMode = Settings.PBMode == 1 and 2 or 1
@@ -553,8 +666,31 @@ PBModeButton.MouseButton1Click:Connect(function()
     end
 end)
 
+LeadPredButton.MouseButton1Click:Connect(function()
+    toggleFeature("LeadPrediction", LeadPredStatus)
+end)
+
 ESPButton.MouseButton1Click:Connect(function()
     toggleFeature("ESPEnabled", ESPStatus)
+    if not Settings.ESPEnabled then
+        clearESP()
+    end
+end)
+
+BGToggleButton.MouseButton1Click:Connect(function()
+    Settings.ShowBackground = not Settings.ShowBackground
+    updateToggleStatus(BGToggleStatus, Settings.ShowBackground)
+    BackgroundImageLabel.Visible = Settings.ShowBackground
+    playClickSound()
+end)
+
+BGTextBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        Settings.BackgroundImage = BGTextBox.Text
+        if Settings.BackgroundImage ~= "" then
+            BackgroundImageLabel.Image = Settings.BackgroundImage
+        end
+    end
 end)
 
 AutoPBKeyDisplay.MouseButton1Click:Connect(function()
@@ -564,7 +700,6 @@ AutoPBKeyDisplay.MouseButton1Click:Connect(function()
     AutoPBKeyDisplay.Text = "[...]"
     AutoPBKeyDisplay.BackgroundColor3 = COLOR.REBIND
     AutoPBKeyDisplay.TextColor3 = Color3.fromRGB(30, 30, 30)
-    playClickSound()
 end)
 
 GERAimKeyDisplay.MouseButton1Click:Connect(function()
@@ -574,7 +709,6 @@ GERAimKeyDisplay.MouseButton1Click:Connect(function()
     GERAimKeyDisplay.Text = "[...]"
     GERAimKeyDisplay.BackgroundColor3 = COLOR.REBIND
     GERAimKeyDisplay.TextColor3 = Color3.fromRGB(30, 30, 30)
-    playClickSound()
 end)
 
 PBModeKeyDisplay.MouseButton1Click:Connect(function()
@@ -584,7 +718,6 @@ PBModeKeyDisplay.MouseButton1Click:Connect(function()
     PBModeKeyDisplay.Text = "[...]"
     PBModeKeyDisplay.BackgroundColor3 = COLOR.REBIND
     PBModeKeyDisplay.TextColor3 = Color3.fromRGB(30, 30, 30)
-    playClickSound()
 end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
@@ -625,7 +758,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
         playClickSound()
     elseif KeyCode == Enum.KeyCode.RightShift then
         MainFrame.Visible = not MainFrame.Visible
-        playClickSound()
     elseif not processed and KeyCode == Enum.KeyCode.X and Settings.GERAim and remoteEvent then
         local target = getClosestPlayer()
         if target and target.Character then
@@ -637,17 +769,13 @@ UserInputService.InputBegan:Connect(function(input, processed)
                     if targetHRP and targetHRP.Parent and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                         local myHRP = LocalPlayer.Character.HumanoidRootPart
                         if (targetHRP.Position - myHRP.Position).Magnitude <= Settings.AimFOV then
-                            local targetPos = targetHRP.Position
-                            
-                            if Settings.AimLead and targetHRP.AssemblyLinearVelocity then
-                                local velocity = targetHRP.AssemblyLinearVelocity
-                                targetPos = targetPos + (velocity * 0.12)
-                            end
-                            
-                            local lookAtCF = CFrame.lookAt(Camera.CFrame.Position, targetPos)
-                            Camera.CFrame = Camera.CFrame:Lerp(lookAtCF, 0.5)
+                            local predictedPos = getPredictedPosition(targetHRP)
+                            local lookVector = (predictedPos - Camera.CFrame.Position).Unit
+                            local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + lookVector)
+                            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, 0.5)
                         else
-                            if aimConnection then aimConnection:Disconnect(); aimConnection = nil end
+                            aimConnection:Disconnect()
+                            aimConnection = nil
                             remoteEvent:FireServer("InputEnded", {Input = Enum.KeyCode.X})
                         end
                     else
@@ -668,157 +796,44 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
+RunService.RenderStepped:Connect(function()
+    if Settings.ESPEnabled then
+        updateESP()
+    end
+end)
+
 updateToggleStatus(AutoPBStatus, Settings.AutoPB)
 updateToggleStatus(GERAimStatus, Settings.GERAim)
-updateToggleStatus(AimLeadStatus, Settings.AimLead)
+updateToggleStatus(LeadPredStatus, Settings.LeadPrediction)
 updateToggleStatus(ESPStatus, Settings.ESPEnabled)
+updateToggleStatus(BGToggleStatus, Settings.ShowBackground)
 local modeText = Settings.PBMode == 1 and "Normal" or "Interrupt"
 PBModeStatus.Text = modeText
 PBModeStatus.BackgroundColor3 = Settings.PBMode == 2 and COLOR.REBIND or COLOR.STATUS_OFF
 
-for _, player in Players:GetPlayers() do
-    if player ~= LocalPlayer then
-        setupPlayer(player)
-        createPlayerEntry(player)
-        createESP(player)
-    end
+for _, player in Players:GetPlayers() do 
+    if player ~= LocalPlayer then 
+        setupPlayer(player) 
+        createPlayerEntry(player) 
+    end 
 end
 
-Players.PlayerAdded:Connect(function(player)
-    createPlayerEntry(player)
-    createESP(player)
-    player.CharacterAdded:Connect(function(character) task.wait(0.5); setupPlayer(player) end)
+Players.PlayerAdded:Connect(function(player) 
+    createPlayerEntry(player) 
+    player.CharacterAdded:Connect(function(character) task.wait(0.5); setupPlayer(player) end) 
 end)
 
 Players.PlayerRemoving:Connect(function(player)
     removePlayerEntry(player)
-    removeESP(player)
+    if ESPObjects[player] then
+        for _, drawing in pairs(ESPObjects[player]) do
+            if drawing then drawing:Remove() end
+        end
+        ESPObjects[player] = nil
+    end
 end)
 
 LocalPlayer.CharacterAdded:Connect(function(char) task.wait(0.1); setupRemoteEvent(char) end)
 if LocalPlayer.Character then setupRemoteEvent(LocalPlayer.Character) end
 
-updateCanvasSizes() (Camera.CFrame.Position - hrp.Position).Magnitude
-            local boxHeight = math.abs(headVector.Y - legVector.Y)
-            local boxWidth = boxHeight / 2
-
-            if not ESPObjects[player].Drawings.Box then
-                local box = Drawing.new("Square")
-                box.Thickness = 2
-                box.Filled = false
-                box.Color = COLOR.ESP_BOX
-                box.Transparency = 1
-                box.ZIndex = 1
-                ESPObjects[player].Drawings.Box = box
-            end
-
-            if not ESPObjects[player].Drawings.Name then
-                local nameText = Drawing.new("Text")
-                nameText.Center = true
-                nameText.Outline = true
-                nameText.Color = COLOR.ESP_TEXT
-                nameText.Size = 14
-                nameText.Font = 2
-                nameText.Transparency = 1
-                nameText.ZIndex = 2
-                ESPObjects[player].Drawings.Name = nameText
-            end
-
-            if not ESPObjects[player].Drawings.Distance then
-                local distText = Drawing.new("Text")
-                distText.Center = true
-                distText.Outline = true
-                distText.Color = COLOR.ESP_TEXT
-                distText.Size = 12
-                distText.Font = 2
-                distText.Transparency = 1
-                distText.ZIndex = 2
-                ESPObjects[player].Drawings.Distance = distText
-            end
-
-            if not ESPObjects[player].Drawings.Line then
-                local line = Drawing.new("Line")
-                line.Thickness = 2
-                line.Color = COLOR.ESP_BOX
-                line.Transparency = 1
-                line.ZIndex = 1
-                ESPObjects[player].Drawings.Line = line
-            end
-
-            local box = ESPObjects[player].Drawings.Box
-            box.Size = Vector2.new(boxWidth, boxHeight)
-            box.Position = Vector2.new(vector.X - boxWidth / 2, vector.Y - boxHeight / 2)
-            box.Visible = true
-
-            local nameText = ESPObjects[player].Drawings.Name
-            nameText.Text = player.Name
-            nameText.Position = Vector2.new(vector.X, headVector.Y - 20)
-            nameText.Visible = true
-
-            local distText = ESPObjects[player].Drawings.Distance
-            distText.Text = math.floor(distance) .. " studs"
-            distText.Position = Vector2.new(vector.X, legVector.Y + 5)
-            distText.Visible = true
-
-            local line = ESPObjects[player].Drawings.Line
-            line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-            line.To = Vector2.new(vector.X, legVector.Y)
-            line.Visible = true
-        else
-            for _, drawing in pairs(ESPObjects[player].Drawings) do
-                if drawing then drawing.Visible = false end
-            end
-        end
-    end
-
-    RunService.RenderStepped:Connect(updateESP)
-end
-
-local function removeESP(player)
-    if ESPObjects[player] then
-        for _, drawing in pairs(ESPObjects[player].Drawings) do
-            if drawing then
-                drawing:Remove()
-            end
-        end
-        if ESPObjects[player].Folder then
-            ESPObjects[player].Folder:Destroy()
-        end
-        ESPObjects[player] = nil
-    end
-end
-
-local function checkSound(soundID)
-    local soundsFolder = game.ReplicatedStorage:FindFirstChild("Sounds")
-    if not soundsFolder then return nil end
-
-    for _, v in soundsFolder:GetChildren() do
-        if v:IsA("Sound") and v.SoundId == soundID then return v.Name end
-    end
-    return nil
-end
-
-local function performBlock(mode)
-    local character = LocalPlayer.Character
-    if not character or not remoteEvent then return end
-
-    pcall(function()
-        if mode == 2 then
-            remoteEvent:FireServer("InputEnded", {Input = Enum.KeyCode.E})
-            remoteEvent:FireServer("InputEnded", {Input = Enum.KeyCode.R})
-            task.wait(0.05)
-        end
-        remoteEvent:FireServer("StartBlocking")
-        task.wait(0.48)
-        remoteEvent:FireServer("StopBlocking")
-    end)
-end
-
-local function checkPBMove(character, moveName)
-    if not Settings.AutoPB or not AttackTimings[moveName] then return end
-
-    local targetHRP = character:FindFirstChild("HumanoidRootPart")
-    local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myHRP or not targetHRP then return end
-
-    local distance =
+updateCanvasSizes()
