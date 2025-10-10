@@ -3,7 +3,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local Camera = game.Workspace.CurrentCamera
+local Camera = workspace.CurrentCamera
 
 local COLOR = {
     TORNADO_GRAY = Color3.fromRGB(150, 160, 170),
@@ -35,16 +35,46 @@ local Settings = {
 }
 
 local AttackTimings = {
-    ["Kick Barrage"] = 0, ["Sticky Fingers Finisher"] = 0.35, ["Gun_Shot1"] = 0.15, ["Heavy_Charge"] = 0.35, ["Erasure"] = 0.35,
-    ["Disc"] = 0.35, ["Propeller Charge"] = 0.35, ["Platinum Slam"] = 0.2, ["Chomp"] = 0.25, ["Scary Monsters Bite"] = 0.25,
-    ["D4C Love Train Finisher"] = 0.35, ["D4C Finisher"] = 0.35, ["Tusk ACT 4 Finisher"] = 0.35, ["Gold Experience Finisher"] = 0.35,
-    ["Gold Experience Requiem Finisher"] = 0.35, ["Scary Monsters Finisher"] = 0.35, ["White Album Finisher"] = 0.35,
-    ["Star Platinum Finisher"] = 0.35, ["Star Platinum: The World Finisher"] = 0.35, ["King Crimson Finisher"] = 0.35,
-    ["King Crimson Requiem Finisher"] = 0.35, ["Crazy Diamond Finisher"] = 0.35, ["The World Alternate Universe Finisher"] = 0.35,
-    ["The World Finisher"] = 0.45, ["The World Finisher2"] = 0.45, ["Purple Haze Finisher"] = 0.35, ["Hermit Purple Finisher"] = 0.35,
-    ["Made in Heaven Finisher"] = 0.35, ["Whitesnake Finisher"] = 0.40, ["C-Moon Finisher"] = 0.35, ["Red Hot Chili Pepper Finisher"] = 0.35,
-    ["Six Pistols Finisher"] = 0.45, ["Stone Free Finisher"] = 0.35, ["Ora Kicks"] = 0.12, ["lightning_jabs"] = 0.15,
-    ["The World Kicks"] = 0.12, ["Muda Kicks"] = 0.12,
+    ["Kick Barrage"] = 0, 
+    ["Sticky Fingers Finisher"] = 0.35, 
+    ["Gun_Shot1"] = 0.15, 
+    ["Heavy_Charge"] = 0.35, 
+    ["Erasure"] = 0.35,
+    ["Disc"] = 0.35, 
+    ["Propeller Charge"] = 0.35, 
+    ["Platinum Slam"] = 0.2, 
+    ["Chomp"] = 0.25, 
+    ["Scary Monsters Bite"] = 0.25,
+    ["D4C Love Train Finisher"] = 0.35, 
+    ["D4C Finisher"] = 0.35, 
+    ["Tusk ACT 4 Finisher"] = 0.35, 
+    ["Gold Experience Finisher"] = 0.35,
+    ["Gold Experience Requiem Finisher"] = 0.35, 
+    ["Scary Monsters Finisher"] = 0.35, 
+    ["White Album Finisher"] = 0.35,
+    ["Star Platinum Finisher"] = 0.35, 
+    ["Star Platinum: The World Finisher"] = 0.35, 
+    ["King Crimson Finisher"] = 0.35,
+    ["King Crimson Requiem Finisher"] = 0.35, 
+    ["Crazy Diamond Finisher"] = 0.35, 
+    ["The World Alternate Universe Finisher"] = 0.35,
+    ["The World Finisher"] = 0.45, 
+    ["The World Finisher2"] = 0.45, 
+    ["Purple Haze Finisher"] = 0.35, 
+    ["Hermit Purple Finisher"] = 0.35,
+    ["Made in Heaven Finisher"] = 0.35, 
+    ["Whitesnake Finisher"] = 0.40, 
+    ["C-Moon Finisher"] = 0.35, 
+    ["Red Hot Chili Pepper Finisher"] = 0.35,
+    ["Six Pistols Finisher"] = 0.45, 
+    ["Stone Free Finisher"] = 0.35, 
+    ["Ora Kicks"] = 0.12, 
+    ["lightning_jabs"] = 0.15,
+    ["The World Kicks"] = 0.12, 
+    ["Muda Kicks"] = 0.12,
+    ["Gravity Shift"] = 0.30,
+    ["Surface Inversion Haymaker"] = 0.30,
+    ["Star Finger"] = 0.25,
 }
 
 local PlayerEntries = {}
@@ -53,12 +83,13 @@ local isListeningForKey = false
 local keyToRebind = nil
 local aimConnection = nil
 local remoteEvent = nil
-local clickSound = Instance.new("Sound")
-clickSound.SoundId = "rbxassetid://6895079853"
-clickSound.Volume = 0.5
-clickSound.Parent = game.SoundService
 
-task.wait(0.5)
+local clickSound = Instance.new("Sound")
+clickSound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+clickSound.Volume = 0.5
+clickSound.Parent = game:GetService("SoundService")
+
+task.wait(0.3)
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GERMenu"
@@ -83,8 +114,7 @@ MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 MainFrame.ZIndex = 1
 
-local Corner = Instance.new("UICorner", MainFrame)
-Corner.CornerRadius = UDim.new(0, 15)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
 
 local Stroke = Instance.new("UIStroke", MainFrame)
 Stroke.Color = COLOR.TORNADO_GRAY
@@ -94,7 +124,7 @@ Stroke.Transparency = 0.5
 local BackgroundImageLabel = Instance.new("ImageLabel", MainFrame)
 BackgroundImageLabel.Size = UDim2.new(1, 0, 1, 0)
 BackgroundImageLabel.BackgroundTransparency = 1
-BackgroundImageLabel.ImageTransparency = 0.7
+BackgroundImageLabel.ImageTransparency = 0.75
 BackgroundImageLabel.ScaleType = Enum.ScaleType.Crop
 BackgroundImageLabel.Visible = false
 BackgroundImageLabel.ZIndex = 1
@@ -133,7 +163,7 @@ ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
 ContentLayout.Padding = UDim.new(0, 10)
 
 local function playClickSound()
-    clickSound:Play()
+    pcall(function() clickSound:Play() end)
 end
 
 local function createButton(text, parent, isKeyBind)
@@ -299,7 +329,7 @@ local function createTextBox(text, parent)
     TextBox.BackgroundColor3 = COLOR.STATUS_OFF
     TextBox.BorderSizePixel = 0
     TextBox.Text = ""
-    TextBox.PlaceholderText = "Image URL..."
+    TextBox.PlaceholderText = "rbxassetid://123456789"
     TextBox.TextColor3 = COLOR.TEXT_BRIGHT
     TextBox.PlaceholderColor3 = COLOR.INFO_TEXT
     TextBox.TextSize = 12
@@ -313,12 +343,15 @@ end
 
 local AutoPBButton, AutoPBStatus, AutoPBKeyDisplay = createButton("Auto Perfect Block", Content, true)
 AutoPBKeyDisplay.Text = Settings.PBKey.Name
-local GERAimButton, GERAimStatus, GERAimKeyDisplay = createButton("GER Aim Toggle", Content, true)
+
+local GERAimButton, GERAimStatus, GERAimKeyDisplay = createButton("GER Aim", Content, true)
 GERAimKeyDisplay.Text = Settings.GERKeyToggle.Name
+
 local PBModeButton, PBModeStatus, PBModeKeyDisplay = createButton("Block Mode", Content, true)
 PBModeKeyDisplay.Text = Settings.BlockModeKey.Name
+
 local LeadPredButton, LeadPredStatus = createButton("Lead Prediction", Content, false)
-local ESPButton, ESPStatus = createButton("ESP Enable", Content, false)
+local ESPButton, ESPStatus = createButton("ESP", Content, false)
 local FOVSlider, FOVValue = createSlider("Aim FOV (studs)", 30, 500, Settings.AimFOV, Content)
 
 local BGTitle = Instance.new("TextLabel", Content)
@@ -350,6 +383,17 @@ BGApplyButton.MouseLeave:Connect(function()
     TweenService:Create(BGApplyButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 150, 255)}):Play()
 end)
 
+BGApplyButton.MouseButton1Click:Connect(function()
+    local imageId = BGTextBox.Text
+    if imageId ~= "" then
+        Settings.BackgroundImage = imageId
+        pcall(function()
+            BackgroundImageLabel.Image = imageId
+            playClickSound()
+        end)
+    end
+end)
+
 local BGToggleButton, BGToggleStatus = createButton("Show Background", Content, false)
 
 local FriendsTitle = Instance.new("TextLabel", Content)
@@ -369,6 +413,7 @@ PlayerListFrame.ScrollBarThickness = 4
 PlayerListFrame.ScrollBarImageColor3 = COLOR.TORNADO_GRAY
 PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
 PlayerListFrame.ZIndex = 3
+
 local PlayerListLayout = Instance.new("UIListLayout", PlayerListFrame)
 PlayerListLayout.Padding = UDim.new(0, 5)
 PlayerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -385,7 +430,7 @@ local InfoText = Instance.new("TextLabel", Footer)
 InfoText.Size = UDim2.new(1, -20, 1, 0)
 InfoText.Position = UDim2.new(0, 10, 0, 0)
 InfoText.BackgroundTransparency = 1
-InfoText.Text = "RightShift - Menu | F/G/V - Toggles | X - Use GER Aim"
+InfoText.Text = "RightShift - Menu | F/G/V - Toggles | X - Aim"
 InfoText.TextColor3 = COLOR.INFO_TEXT
 InfoText.TextSize = 12
 InfoText.Font = Enum.Font.Gotham
@@ -475,7 +520,7 @@ end
 local function clearESP()
     for _, espObj in pairs(ESPObjects) do
         for _, drawing in pairs(espObj) do
-            if drawing then drawing:Remove() end
+            pcall(function() drawing:Remove() end)
         end
     end
     ESPObjects = {}
@@ -558,7 +603,7 @@ local function updateESP()
                         local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                         if myHRP then
                             local dist = math.floor((myHRP.Position - hrp.Position).Magnitude)
-                            espObj.Distance.Text = tostring(dist) .. " studs"
+                            espObj.Distance.Text = tostring(dist) .. "m"
                             espObj.Distance.Position = Vector2.new(vector.X, legVector.Y + 5)
                             espObj.Distance.Visible = true
                         end
@@ -579,7 +624,9 @@ local function checkSound(soundID)
     if not soundsFolder then return nil end
 
     for _, v in soundsFolder:GetChildren() do
-        if v:IsA("Sound") and v.SoundId == soundID then return v.Name end
+        if v:IsA("Sound") and v.SoundId == soundID then 
+            return v.Name 
+        end
     end
     return nil
 end
@@ -595,7 +642,7 @@ local function performBlock(mode)
             task.wait(0.03)
         end
         remoteEvent:FireServer("StartBlocking")
-        task.wait(0.38)
+        task.wait(0.35)
         remoteEvent:FireServer("StopBlocking")
     end)
 end
@@ -641,8 +688,8 @@ local function getPredictedPosition(targetHRP)
     if not Settings.LeadPrediction then return targetHRP.Position end
 
     local velocity = targetHRP.AssemblyLinearVelocity or targetHRP.Velocity
-    if velocity then
-        return targetHRP.Position + (velocity * 0.1)
+    if velocity and velocity.Magnitude > 0 then
+        return targetHRP.Position + (velocity * 0.12)
     end
     return targetHRP.Position
 end
@@ -650,19 +697,16 @@ end
 local function setupPlayer(player)
     if not player.Character then return end
 
-    local connection
-    connection = player.Character.DescendantAdded:Connect(function(child)
-        if Settings.AutoPB and child:IsA("Sound") and child.SoundId then
-            task.wait(0.05)
-            local moveName = checkSound(child.SoundId)
-            if moveName then
-                checkPBMove(player.Character, moveName)
-            end
+    player.Character.DescendantAdded:Connect(function(child)
+        if Settings.AutoPB and child:IsA("Sound") and child.SoundId ~= "" then
+            task.spawn(function()
+                task.wait(0.03)
+                local moveName = checkSound(child.SoundId)
+                if moveName then
+                    checkPBMove(player.Character, moveName)
+                end
+            end)
         end
-    end)
-
-    player.CharacterRemoving:Connect(function()
-        if connection then connection:Disconnect() end
     end)
 end
 
@@ -708,15 +752,6 @@ BGToggleButton.MouseButton1Click:Connect(function()
     updateToggleStatus(BGToggleStatus, Settings.ShowBackground)
     BackgroundImageLabel.Visible = Settings.ShowBackground
     playClickSound()
-end)
-
-BGTextBox.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        Settings.BackgroundImage = BGTextBox.Text
-        if Settings.BackgroundImage ~= "" then
-            BackgroundImageLabel.Image = Settings.BackgroundImage
-        end
-    end
 end)
 
 AutoPBKeyDisplay.MouseButton1Click:Connect(function()
@@ -794,14 +829,14 @@ UserInputService.InputBegan:Connect(function(input, processed)
                 aimConnection = RunService.RenderStepped:Connect(function()
                     if targetHRP and targetHRP.Parent and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                         local myHRP = LocalPlayer.Character.HumanoidRootPart
+                        
                         if (targetHRP.Position - myHRP.Position).Magnitude <= Settings.AimFOV then
                             local predictedPos = getPredictedPosition(targetHRP)
-                            local direction = (predictedPos - myHRP.Position).Unit
-                            local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + direction)
-                            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, 0.5)
+                            local direction = (predictedPos - Camera.CFrame.Position).Unit
+                            local lookAtCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + direction)
+                            Camera.CFrame = Camera.CFrame:Lerp(lookAtCFrame, 0.45)
                         else
-                            aimConnection:Disconnect()
-                            aimConnection = nil
+                            if aimConnection then aimConnection:Disconnect(); aimConnection = nil end
                             remoteEvent:FireServer("InputEnded", {Input = Enum.KeyCode.X})
                         end
                     else
@@ -824,7 +859,7 @@ end)
 
 RunService.RenderStepped:Connect(function()
     if Settings.ESPEnabled then
-        updateESP()
+        pcall(updateESP)
     end
 end)
 
@@ -846,20 +881,34 @@ end
 
 Players.PlayerAdded:Connect(function(player)
     createPlayerEntry(player)
-    player.CharacterAdded:Connect(function(character) task.wait(0.5); setupPlayer(player) end)
+    player.CharacterAdded:Connect(function(character) 
+        task.wait(0.5)
+        setupPlayer(player)
+    end)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
     removePlayerEntry(player)
     if ESPObjects[player] then
         for _, drawing in pairs(ESPObjects[player]) do
-            if drawing then drawing:Remove() end
+            pcall(function() drawing:Remove() end)
         end
         ESPObjects[player] = nil
     end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function(char) task.wait(0.1); setupRemoteEvent(char) end)
-if LocalPlayer.Character then setupRemoteEvent(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(function(char) 
+    task.wait(0.1)
+    setupRemoteEvent(char)
+    for _, player in Players:GetPlayers() do
+        if player ~= LocalPlayer then
+            setupPlayer(player)
+        end
+    end
+end)
+
+if LocalPlayer.Character then 
+    setupRemoteEvent(LocalPlayer.Character)
+end
 
 updateCanvasSizes()
