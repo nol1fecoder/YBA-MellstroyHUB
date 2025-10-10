@@ -58,26 +58,38 @@ clickSound.SoundId = "rbxassetid://6895079853"
 clickSound.Volume = 0.5
 clickSound.Parent = game.SoundService
 
+task.wait(0.5)
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "GERMenu"
-ScreenGui.Parent = game.CoreGui
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local success = pcall(function()
+    ScreenGui.Parent = game.CoreGui
+end)
+if not success then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 380, 0, 620) 
-MainFrame.Position = UDim2.new(0.5, -190, 0.5, -310) 
-MainFrame.BackgroundColor3 = COLOR.BACKGROUND
+MainFrame.Size = UDim2.new(0, 380, 0, 620)
+MainFrame.Position = UDim2.new(0.5, -190, 0.5, -310)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
+MainFrame.ZIndex = 1
 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
-Instance.new("UIStroke", MainFrame).Color = COLOR.TORNADO_GRAY
-MainFrame.UIStroke.Thickness = 1.5
-MainFrame.UIStroke.Transparency = 0.7
+local Corner = Instance.new("UICorner", MainFrame)
+Corner.CornerRadius = UDim.new(0, 15)
+
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Color = COLOR.TORNADO_GRAY
+Stroke.Thickness = 2
+Stroke.Transparency = 0.5
 
 local BackgroundImageLabel = Instance.new("ImageLabel", MainFrame)
 BackgroundImageLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -88,18 +100,11 @@ BackgroundImageLabel.Visible = false
 BackgroundImageLabel.ZIndex = 1
 Instance.new("UICorner", BackgroundImageLabel).CornerRadius = UDim.new(0, 15)
 
-local Gradient = Instance.new("UIGradient", MainFrame)
-Gradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 25, 30)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 15, 20))
-}
-Gradient.Rotation = 45
-Gradient.ZIndex = 2
-
 local TitleBar = Instance.new("Frame", MainFrame)
 TitleBar.Size = UDim2.new(1, 0, 0, 50)
 TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-TitleBar.ZIndex = 3
+TitleBar.BorderSizePixel = 0
+TitleBar.ZIndex = 2
 Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 15)
 
 local Title = Instance.new("TextLabel", TitleBar)
@@ -111,7 +116,7 @@ Title.TextColor3 = COLOR.TORNADO_GRAY
 Title.TextSize = 24
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.ZIndex = 4
+Title.ZIndex = 3
 
 local Content = Instance.new("ScrollingFrame", MainFrame)
 Content.Size = UDim2.new(1, -30, 1, -100)
@@ -120,8 +125,8 @@ Content.BackgroundTransparency = 1
 Content.BorderSizePixel = 0
 Content.ScrollBarThickness = 4
 Content.ScrollBarImageColor3 = COLOR.TORNADO_GRAY
-Content.AutomaticCanvasSize = Enum.AutomaticSize.None
-Content.ZIndex = 3
+Content.CanvasSize = UDim2.new(0, 0, 0, 0)
+Content.ZIndex = 2
 
 local ContentLayout = Instance.new("UIListLayout", Content)
 ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -139,7 +144,7 @@ local function createButton(text, parent, isKeyBind)
     Button.Text = ""
     Button.AutoButtonColor = false
     Button.Parent = parent
-    Button.ZIndex = 4
+    Button.ZIndex = 3
 
     Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 10)
 
@@ -152,7 +157,7 @@ local function createButton(text, parent, isKeyBind)
     ButtonText.TextSize = 16
     ButtonText.Font = Enum.Font.GothamBold
     ButtonText.TextXAlignment = Enum.TextXAlignment.Left
-    ButtonText.ZIndex = 5
+    ButtonText.ZIndex = 4
 
     local Status = Instance.new("TextLabel", Button)
     Status.Size = UDim2.new(0, 50, 0, 25)
@@ -162,7 +167,7 @@ local function createButton(text, parent, isKeyBind)
     Status.TextColor3 = COLOR.TEXT_OFF
     Status.TextSize = 12
     Status.Font = Enum.Font.GothamBold
-    Status.ZIndex = 5
+    Status.ZIndex = 4
 
     local KeyDisplay = nil
 
@@ -178,7 +183,7 @@ local function createButton(text, parent, isKeyBind)
         KeyDisplay.TextColor3 = COLOR.TORNADO_GRAY
         KeyDisplay.TextSize = 12
         KeyDisplay.Font = Enum.Font.GothamBold
-        KeyDisplay.ZIndex = 5
+        KeyDisplay.ZIndex = 4
         Instance.new("UICorner", KeyDisplay).CornerRadius = UDim.new(0, 8)
     else
         Status.Position = UDim2.new(1, -60, 0.5, -12.5)
@@ -200,7 +205,7 @@ local function createSlider(text, min, max, default, parent)
     Container.Size = UDim2.new(1, -10, 0, 60)
     Container.BackgroundColor3 = COLOR.DARK_ACCENT
     Container.BorderSizePixel = 0
-    Container.ZIndex = 4
+    Container.ZIndex = 3
     Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 10)
 
     local Label = Instance.new("TextLabel", Container)
@@ -212,7 +217,7 @@ local function createSlider(text, min, max, default, parent)
     Label.TextSize = 14
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.ZIndex = 5
+    Label.ZIndex = 4
 
     local ValueLabel = Instance.new("TextLabel", Container)
     ValueLabel.Size = UDim2.new(0, 70, 0, 25)
@@ -222,23 +227,23 @@ local function createSlider(text, min, max, default, parent)
     ValueLabel.TextColor3 = COLOR.TORNADO_GRAY
     ValueLabel.TextSize = 14
     ValueLabel.Font = Enum.Font.GothamBold
-    ValueLabel.ZIndex = 5
+    ValueLabel.ZIndex = 4
 
     local SliderBack = Instance.new("Frame", Container)
     SliderBack.Size = UDim2.new(1, -20, 0, 6)
     SliderBack.Position = UDim2.new(0, 10, 0, 40)
     SliderBack.BackgroundColor3 = COLOR.STATUS_OFF
     SliderBack.BorderSizePixel = 0
-    SliderBack.ZIndex = 5
+    SliderBack.ZIndex = 4
     Instance.new("UICorner", SliderBack).CornerRadius = UDim.new(1, 0)
 
     local SliderFill = Instance.new("Frame", SliderBack)
-    SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)  
+    SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     SliderFill.BackgroundColor3 = COLOR.ACCENT_ON
     SliderFill.BorderSizePixel = 0
-    SliderFill.ZIndex = 6
+    SliderFill.ZIndex = 5
     Instance.new("UICorner", SliderFill).CornerRadius = UDim.new(1, 0)
-    
+
     local dragging = false
     local function updateSlider(inputPos)
         local absPos = SliderBack.AbsolutePosition
@@ -248,7 +253,7 @@ local function createSlider(text, min, max, default, parent)
         ValueLabel.Text = tostring(newVal)
         Settings.AimFOV = newVal
     end
-    
+
     SliderBack.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
@@ -274,7 +279,7 @@ local function createTextBox(text, parent)
     Container.Size = UDim2.new(1, -10, 0, 70)
     Container.BackgroundColor3 = COLOR.DARK_ACCENT
     Container.BorderSizePixel = 0
-    Container.ZIndex = 4
+    Container.ZIndex = 3
     Instance.new("UICorner", Container).CornerRadius = UDim.new(0, 10)
 
     local Label = Instance.new("TextLabel", Container)
@@ -286,7 +291,7 @@ local function createTextBox(text, parent)
     Label.TextSize = 14
     Label.Font = Enum.Font.GothamBold
     Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.ZIndex = 5
+    Label.ZIndex = 4
 
     local TextBox = Instance.new("TextBox", Container)
     TextBox.Size = UDim2.new(1, -20, 0, 30)
@@ -300,7 +305,7 @@ local function createTextBox(text, parent)
     TextBox.TextSize = 12
     TextBox.Font = Enum.Font.Gotham
     TextBox.ClearTextOnFocus = false
-    TextBox.ZIndex = 5
+    TextBox.ZIndex = 4
     Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 8)
 
     return Container, TextBox
@@ -314,7 +319,7 @@ local PBModeButton, PBModeStatus, PBModeKeyDisplay = createButton("Block Mode", 
 PBModeKeyDisplay.Text = Settings.BlockModeKey.Name
 local LeadPredButton, LeadPredStatus = createButton("Lead Prediction", Content, false)
 local ESPButton, ESPStatus = createButton("ESP Enable", Content, false)
-local FOVSlider, FOVValue = createSlider("Aim FOV (studs)", 30, 500, Settings.AimFOV, Content) 
+local FOVSlider, FOVValue = createSlider("Aim FOV (studs)", 30, 500, Settings.AimFOV, Content)
 
 local BGTitle = Instance.new("TextLabel", Content)
 BGTitle.Size = UDim2.new(1, -10, 0, 25)
@@ -323,9 +328,28 @@ BGTitle.Text = "Background Image"
 BGTitle.TextColor3 = COLOR.TORNADO_GRAY
 BGTitle.Font = Enum.Font.GothamBold
 BGTitle.TextSize = 16
-BGTitle.ZIndex = 4
+BGTitle.ZIndex = 3
 
 local BGContainer, BGTextBox = createTextBox("Image URL", Content)
+
+local BGApplyButton = Instance.new("TextButton", Content)
+BGApplyButton.Size = UDim2.new(1, -10, 0, 40)
+BGApplyButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+BGApplyButton.BorderSizePixel = 0
+BGApplyButton.Text = "Apply Image"
+BGApplyButton.TextColor3 = COLOR.TEXT_BRIGHT
+BGApplyButton.TextSize = 16
+BGApplyButton.Font = Enum.Font.GothamBold
+BGApplyButton.ZIndex = 3
+Instance.new("UICorner", BGApplyButton).CornerRadius = UDim.new(0, 10)
+
+BGApplyButton.MouseEnter:Connect(function()
+    TweenService:Create(BGApplyButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 180, 255)}):Play()
+end)
+BGApplyButton.MouseLeave:Connect(function()
+    TweenService:Create(BGApplyButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 150, 255)}):Play()
+end)
+
 local BGToggleButton, BGToggleStatus = createButton("Show Background", Content, false)
 
 local FriendsTitle = Instance.new("TextLabel", Content)
@@ -335,15 +359,16 @@ FriendsTitle.Text = "Server Players"
 FriendsTitle.TextColor3 = COLOR.TORNADO_GRAY
 FriendsTitle.Font = Enum.Font.GothamBold
 FriendsTitle.TextSize = 18
-FriendsTitle.ZIndex = 4
+FriendsTitle.ZIndex = 3
 
 local PlayerListFrame = Instance.new("ScrollingFrame", Content)
-PlayerListFrame.Size = UDim2.new(1, -10, 0, 150) 
+PlayerListFrame.Size = UDim2.new(1, -10, 0, 150)
 PlayerListFrame.BackgroundTransparency = 1
-PlayerListFrame.BorderSizePixel = 0 
-PlayerListFrame.ScrollBarThickness = 4 
+PlayerListFrame.BorderSizePixel = 0
+PlayerListFrame.ScrollBarThickness = 4
 PlayerListFrame.ScrollBarImageColor3 = COLOR.TORNADO_GRAY
-PlayerListFrame.ZIndex = 4
+PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayerListFrame.ZIndex = 3
 local PlayerListLayout = Instance.new("UIListLayout", PlayerListFrame)
 PlayerListLayout.Padding = UDim.new(0, 5)
 PlayerListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -352,7 +377,8 @@ local Footer = Instance.new("Frame", MainFrame)
 Footer.Size = UDim2.new(1, 0, 0, 40)
 Footer.Position = UDim2.new(0, 0, 1, -40)
 Footer.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-Footer.ZIndex = 3
+Footer.BorderSizePixel = 0
+Footer.ZIndex = 2
 Instance.new("UICorner", Footer).CornerRadius = UDim.new(0, 15)
 
 local InfoText = Instance.new("TextLabel", Footer)
@@ -364,7 +390,7 @@ InfoText.TextColor3 = COLOR.INFO_TEXT
 InfoText.TextSize = 12
 InfoText.Font = Enum.Font.Gotham
 InfoText.TextXAlignment = Enum.TextXAlignment.Left
-InfoText.ZIndex = 4
+InfoText.ZIndex = 3
 
 local function updateCanvasSizes()
     task.wait()
@@ -398,12 +424,12 @@ end
 
 local function createPlayerEntry(player)
     if PlayerEntries[player] then return end
-    
+
     local Entry = Instance.new("Frame", PlayerListFrame)
     Entry.Size = UDim2.new(1, 0, 0, 35)
     Entry.BackgroundColor3 = COLOR.DARK_ACCENT
     Entry.BorderSizePixel = 0
-    Entry.ZIndex = 5
+    Entry.ZIndex = 4
     Instance.new("UICorner", Entry).CornerRadius = UDim.new(0, 8)
 
     local NameLabel = Instance.new("TextLabel", Entry)
@@ -415,7 +441,7 @@ local function createPlayerEntry(player)
     NameLabel.Font = Enum.Font.Gotham
     NameLabel.TextSize = 14
     NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    NameLabel.ZIndex = 6
+    NameLabel.ZIndex = 5
 
     local FriendButton = Instance.new("TextButton", Entry)
     FriendButton.Size = UDim2.new(0, 70, 0, 25)
@@ -423,7 +449,7 @@ local function createPlayerEntry(player)
     FriendButton.BorderSizePixel = 0
     FriendButton.Font = Enum.Font.GothamBold
     FriendButton.TextSize = 12
-    FriendButton.ZIndex = 6
+    FriendButton.ZIndex = 5
     Instance.new("UICorner", FriendButton).CornerRadius = UDim.new(0, 6)
 
     updateFriendButton(FriendButton, player.Name)
@@ -432,7 +458,7 @@ local function createPlayerEntry(player)
         Settings.Friends[player.Name] = not Settings.Friends[player.Name]
         updateFriendButton(FriendButton, player.Name)
     end)
-    
+
     PlayerEntries[player] = Entry
     updateCanvasSizes()
 end
@@ -457,14 +483,14 @@ end
 
 local function createESPForPlayer(player)
     if ESPObjects[player] or not player.Character then return end
-    
+
     local Box = Drawing.new("Square")
     Box.Visible = false
     Box.Color = Color3.new(1, 1, 1)
     Box.Thickness = 2
     Box.Transparency = 1
     Box.Filled = false
-    
+
     local NameTag = Drawing.new("Text")
     NameTag.Visible = false
     NameTag.Color = Color3.new(1, 1, 1)
@@ -472,20 +498,20 @@ local function createESPForPlayer(player)
     NameTag.Center = true
     NameTag.Outline = true
     NameTag.Text = player.Name
-    
+
     local Tracer = Drawing.new("Line")
     Tracer.Visible = false
     Tracer.Color = Color3.new(1, 1, 1)
     Tracer.Thickness = 1
     Tracer.Transparency = 1
-    
+
     local Distance = Drawing.new("Text")
     Distance.Visible = false
     Distance.Color = Color3.new(1, 1, 1)
     Distance.Size = 14
     Distance.Center = true
     Distance.Outline = true
-    
+
     ESPObjects[player] = {Box = Box, NameTag = NameTag, Tracer = Tracer, Distance = Distance}
 end
 
@@ -494,41 +520,41 @@ local function updateESP()
         clearESP()
         return
     end
-    
+
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             if not ESPObjects[player] then
                 createESPForPlayer(player)
             end
-            
+
             local character = player.Character
             local hrp = character:FindFirstChild("HumanoidRootPart")
             local humanoid = character:FindFirstChild("Humanoid")
-            
+
             if hrp and humanoid and humanoid.Health > 0 then
                 local espObj = ESPObjects[player]
                 local vector, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-                
+
                 if onScreen then
                     local headPos = character:FindFirstChild("Head")
                     if headPos then
                         local headVector = Camera:WorldToViewportPoint(headPos.Position + Vector3.new(0, 0.5, 0))
                         local legVector = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
-                        
+
                         local height = math.abs(headVector.Y - legVector.Y)
                         local width = height / 2
-                        
+
                         espObj.Box.Size = Vector2.new(width, height)
                         espObj.Box.Position = Vector2.new(vector.X - width / 2, headVector.Y)
                         espObj.Box.Visible = true
-                        
+
                         espObj.NameTag.Position = Vector2.new(vector.X, headVector.Y - 20)
                         espObj.NameTag.Visible = true
-                        
+
                         espObj.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                         espObj.Tracer.To = Vector2.new(vector.X, legVector.Y)
                         espObj.Tracer.Visible = true
-                        
+
                         local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                         if myHRP then
                             local dist = math.floor((myHRP.Position - hrp.Position).Magnitude)
@@ -569,23 +595,23 @@ local function performBlock(mode)
             task.wait(0.03)
         end
         remoteEvent:FireServer("StartBlocking")
-        task.wait(0.48)
+        task.wait(0.38)
         remoteEvent:FireServer("StopBlocking")
     end)
 end
 
 local function checkPBMove(character, moveName)
     if not Settings.AutoPB or not AttackTimings[moveName] then return end
-    
+
     local targetHRP = character:FindFirstChild("HumanoidRootPart")
     local myHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myHRP or not targetHRP then return end
-    
+
     local distance = (myHRP.Position - targetHRP.Position).Magnitude
-    if distance < 35 then 
+    if distance < 35 then
         task.spawn(function()
             task.wait(AttackTimings[moveName])
-            performBlock(Settings.PBMode) 
+            performBlock(Settings.PBMode)
         end)
     end
 end
@@ -601,7 +627,7 @@ local function getClosestPlayer()
             local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
             if humanoid and humanoid.Health > 0 and rootPart then
                 local dist = (myHRP.Position - rootPart.Position).Magnitude
-                if dist < shortestDist and dist < Settings.AimFOV then 
+                if dist < shortestDist and dist < Settings.AimFOV then
                     closest = player
                     shortestDist = dist
                 end
@@ -613,7 +639,7 @@ end
 
 local function getPredictedPosition(targetHRP)
     if not Settings.LeadPrediction then return targetHRP.Position end
-    
+
     local velocity = targetHRP.AssemblyLinearVelocity or targetHRP.Velocity
     if velocity then
         return targetHRP.Position + (velocity * 0.1)
@@ -629,12 +655,12 @@ local function setupPlayer(player)
         if Settings.AutoPB and child:IsA("Sound") and child.SoundId then
             task.wait(0.05)
             local moveName = checkSound(child.SoundId)
-            if moveName then 
+            if moveName then
                 checkPBMove(player.Character, moveName)
             end
         end
     end)
-    
+
     player.CharacterRemoving:Connect(function()
         if connection then connection:Disconnect() end
     end)
@@ -770,8 +796,8 @@ UserInputService.InputBegan:Connect(function(input, processed)
                         local myHRP = LocalPlayer.Character.HumanoidRootPart
                         if (targetHRP.Position - myHRP.Position).Magnitude <= Settings.AimFOV then
                             local predictedPos = getPredictedPosition(targetHRP)
-                            local lookVector = (predictedPos - Camera.CFrame.Position).Unit
-                            local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + lookVector)
+                            local direction = (predictedPos - myHRP.Position).Unit
+                            local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + direction)
                             Camera.CFrame = Camera.CFrame:Lerp(newCFrame, 0.5)
                         else
                             aimConnection:Disconnect()
@@ -811,16 +837,16 @@ local modeText = Settings.PBMode == 1 and "Normal" or "Interrupt"
 PBModeStatus.Text = modeText
 PBModeStatus.BackgroundColor3 = Settings.PBMode == 2 and COLOR.REBIND or COLOR.STATUS_OFF
 
-for _, player in Players:GetPlayers() do 
-    if player ~= LocalPlayer then 
-        setupPlayer(player) 
-        createPlayerEntry(player) 
-    end 
+for _, player in Players:GetPlayers() do
+    if player ~= LocalPlayer then
+        setupPlayer(player)
+        createPlayerEntry(player)
+    end
 end
 
-Players.PlayerAdded:Connect(function(player) 
-    createPlayerEntry(player) 
-    player.CharacterAdded:Connect(function(character) task.wait(0.5); setupPlayer(player) end) 
+Players.PlayerAdded:Connect(function(player)
+    createPlayerEntry(player)
+    player.CharacterAdded:Connect(function(character) task.wait(0.5); setupPlayer(player) end)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
