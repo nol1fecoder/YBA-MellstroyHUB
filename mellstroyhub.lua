@@ -36,45 +36,45 @@ local Settings = {
 
 local AttackTimings = {
     ["Kick Barrage"] = 0, 
-    ["Sticky Fingers Finisher"] = 0.35, 
+    ["Sticky Fingers Finisher"] = 0.28, 
     ["Gun_Shot1"] = 0.15, 
-    ["Heavy_Charge"] = 0.35, 
-    ["Erasure"] = 0.35,
-    ["Disc"] = 0.35, 
-    ["Propeller Charge"] = 0.35, 
-    ["Platinum Slam"] = 0.2, 
-    ["Chomp"] = 0.25, 
-    ["Scary Monsters Bite"] = 0.25,
-    ["D4C Love Train Finisher"] = 0.35, 
-    ["D4C Finisher"] = 0.35, 
-    ["Tusk ACT 4 Finisher"] = 0.35, 
-    ["Gold Experience Finisher"] = 0.35,
-    ["Gold Experience Requiem Finisher"] = 0.35, 
-    ["Scary Monsters Finisher"] = 0.35, 
-    ["White Album Finisher"] = 0.35,
-    ["Star Platinum Finisher"] = 0.35, 
-    ["Star Platinum: The World Finisher"] = 0.35, 
-    ["King Crimson Finisher"] = 0.35,
-    ["King Crimson Requiem Finisher"] = 0.35, 
-    ["Crazy Diamond Finisher"] = 0.35, 
-    ["The World Alternate Universe Finisher"] = 0.35,
-    ["The World Finisher"] = 0.45, 
-    ["The World Finisher2"] = 0.45, 
-    ["Purple Haze Finisher"] = 0.35, 
-    ["Hermit Purple Finisher"] = 0.35,
-    ["Made in Heaven Finisher"] = 0.35, 
-    ["Whitesnake Finisher"] = 0.40, 
-    ["C-Moon Finisher"] = 0.35, 
-    ["Red Hot Chili Pepper Finisher"] = 0.35,
-    ["Six Pistols Finisher"] = 0.45, 
-    ["Stone Free Finisher"] = 0.35, 
-    ["Ora Kicks"] = 0.12, 
-    ["lightning_jabs"] = 0.15,
-    ["The World Kicks"] = 0.12, 
-    ["Muda Kicks"] = 0.12,
-    ["Gravity Shift"] = 0.30,
-    ["Surface Inversion Haymaker"] = 0.30,
-    ["Star Finger"] = 0.25,
+    ["Heavy_Charge"] = 0.28, 
+    ["Erasure"] = 0.28,
+    ["Disc"] = 0.28, 
+    ["Propeller Charge"] = 0.28, 
+    ["Platinum Slam"] = 0.15, 
+    ["Chomp"] = 0.2, 
+    ["Scary Monsters Bite"] = 0.2,
+    ["D4C Love Train Finisher"] = 0.28, 
+    ["D4C Finisher"] = 0.28, 
+    ["Tusk ACT 4 Finisher"] = 0.28, 
+    ["Gold Experience Finisher"] = 0.28,
+    ["Gold Experience Requiem Finisher"] = 0.28, 
+    ["Scary Monsters Finisher"] = 0.28, 
+    ["White Album Finisher"] = 0.28,
+    ["Star Platinum Finisher"] = 0.28, 
+    ["Star Platinum: The World Finisher"] = 0.28, 
+    ["King Crimson Finisher"] = 0.28,
+    ["King Crimson Requiem Finisher"] = 0.28, 
+    ["Crazy Diamond Finisher"] = 0.28, 
+    ["The World Alternate Universe Finisher"] = 0.28,
+    ["The World Finisher"] = 0.36, 
+    ["The World Finisher2"] = 0.36, 
+    ["Purple Haze Finisher"] = 0.28, 
+    ["Hermit Purple Finisher"] = 0.28,
+    ["Made in Heaven Finisher"] = 0.28, 
+    ["Whitesnake Finisher"] = 0.32, 
+    ["C-Moon Finisher"] = 0.28, 
+    ["Red Hot Chili Pepper Finisher"] = 0.28,
+    ["Six Pistols Finisher"] = 0.36, 
+    ["Stone Free Finisher"] = 0.28, 
+    ["Ora Kicks"] = 0.1, 
+    ["lightning_jabs"] = 0.12,
+    ["The World Kicks"] = 0.1, 
+    ["Muda Kicks"] = 0.1,
+    ["Gravity Shift"] = 0.25,
+    ["Surface Inversion Haymaker"] = 0.25,
+    ["Star Finger"] = 0.2,
 }
 
 local PlayerEntries = {}
@@ -85,8 +85,8 @@ local aimConnection = nil
 local remoteEvent = nil
 
 local clickSound = Instance.new("Sound")
-clickSound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
-clickSound.Volume = 0.5
+clickSound.SoundId = "rbxasset://sounds/button.wav"
+clickSound.Volume = 0.3
 clickSound.Parent = game:GetService("SoundService")
 
 task.wait(0.3)
@@ -642,7 +642,7 @@ local function performBlock(mode)
             task.wait(0.03)
         end
         remoteEvent:FireServer("StartBlocking")
-        task.wait(0.35)
+        task.wait(0.28)
         remoteEvent:FireServer("StopBlocking")
     end)
 end
@@ -655,7 +655,7 @@ local function checkPBMove(character, moveName)
     if not myHRP or not targetHRP then return end
 
     local distance = (myHRP.Position - targetHRP.Position).Magnitude
-    if distance < 35 then
+    if distance < 40 then
         task.spawn(function()
             task.wait(AttackTimings[moveName])
             performBlock(Settings.PBMode)
@@ -832,9 +832,9 @@ UserInputService.InputBegan:Connect(function(input, processed)
                         
                         if (targetHRP.Position - myHRP.Position).Magnitude <= Settings.AimFOV then
                             local predictedPos = getPredictedPosition(targetHRP)
-                            local direction = (predictedPos - Camera.CFrame.Position).Unit
-                            local lookAtCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + direction)
-                            Camera.CFrame = Camera.CFrame:Lerp(lookAtCFrame, 0.45)
+                            local lookVector = (predictedPos - Camera.CFrame.Position).Unit
+                            local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + lookVector)
+                            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, 0.5)
                         else
                             if aimConnection then aimConnection:Disconnect(); aimConnection = nil end
                             remoteEvent:FireServer("InputEnded", {Input = Enum.KeyCode.X})
